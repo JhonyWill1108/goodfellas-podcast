@@ -567,10 +567,13 @@
 </head>
 <body>
 
+<!-- SHEETJS LIBRARY FOR EXCEL/CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+
 <!-- FIREBASE SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy }
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy, writeBatch }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ══════════════════════════════════════════════════════
@@ -591,6 +594,10 @@ const CONFIGURED = !FIREBASE_CONFIG.apiKey.includes("SUA_");
 let db, app;
 let eventos = [], lutadores = [], cts = [];
 let eventoEditId = null, lutadorEditId = null, ctEditId = null;
+
+// ── Upload state ────────────────────────────────────
+let uploadData = null;
+let uploadTipo = null;
 
 // ── Estado da UI ──────────────────────────────────────
 let currentSection  = 'painel';
@@ -1028,6 +1035,269 @@ window.deleteCT = async function(id) {
   await loadCTs(); renderAll();
 }
 
+// ── UPLOAD PLANILHA ──────────────────────────────────
+window.openUploadLutadores = function() {
+  $('upload-tipo').value = 'lutadores';
+  $('upload-file').value = '';
+  $('upload-preview').innerHTML = '';
+  $('upload-preview-section').style.display = 'none';
+  $('upload-btn-import').disabled = true;
+  $('upload-btn-import').style.opacity = '0.5';
+  $('upload-btn-import').style.cursor = 'not-allowed';
+  $('upload-btn-import').textContent = '📤 Importar';
+  
+  $('upload-template-info').innerHTML = `
+    <strong>LUTADORES</strong><br>
+    Coluna A: <strong>Nome</strong> (obrigatório)<br>
+    Coluna B: Instagram (sem @)<br>
+    Coluna C: Faixa (BRANCA, AZUL, ROXA, PRETA, etc)<br>
+    Coluna D: Grau (1°, 2°, 3°, etc)<br>
+    Coluna E: Equipe<br>
+    Coluna F: Idade<br>
+    Coluna G: Peso (em kg)<br>
+    Coluna H: Altura (em cm)<br><br>
+    <button class="btn btn-sm btn-ghost" onclick="downloadTemplateLutadores()" style="margin-top:8px">📥 Baixar template</button>
+  `;
+  
+  $('modal-upload').style.display = 'flex';
+}
+
+window.openUploadCTs = function() {
+  $('upload-tipo').value = 'cts';
+  $('upload-file').value = '';
+  $('upload-preview').innerHTML = '';
+  $('upload-preview-section').style.display = 'none';
+  $('upload-btn-import').disabled = true;
+  $('upload-btn-import').style.opacity = '0.5';
+  $('upload-btn-import').style.cursor = 'not-allowed';
+  $('upload-btn-import').textContent = '📤 Importar';
+  
+  $('upload-template-info').innerHTML = `
+    <strong>CTs</strong><br>
+    Coluna A: <strong>Nome do CT</strong> (obrigatório)<br>
+    Coluna B: Responsável<br>
+    Coluna C: Endereço<br><br>
+    <button class="btn btn-sm btn-ghost" onclick="downloadTemplateCTs()" style="margin-top:8px">📥 Baixar template</button>
+  `;
+  
+  $('modal-upload').style.display = 'flex';
+}
+
+window.downloadTemplateLutadores = function() {
+  const workbook = XLSX.utils.book_new();
+  const data = [
+    ['Nome', 'Instagram', 'Faixa', 'Grau', 'Equipe', 'Idade', 'Peso', 'Altura'],
+    ['João Silva', 'joaosilva', 'AZUL', '3°', 'Atos', '25', '78', '175'],
+    ['Maria Santos', 'mariasantos', 'ROXA', '', 'Alliance', '30', '65', '168'],
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet(data);
+  sheet['!cols'] = [{wch: 20}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 20}, {wch: 8}, {wch: 8}, {wch: 8}];
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Lutadores');
+  XLSX.writeFile(workbook, 'template_lutadores.xlsx');
+  toast('Template baixado!');
+}
+
+window.downloadTemplateCTs = function() {
+  const workbook = XLSX.utils.book_new();
+  const data = [
+    ['Nome do CT', 'Responsável', 'Endereço'],
+    ['CT Atos', 'João Silva', 'Rua A, 123 - São Paulo, SP'],
+    ['CT Alliance', 'Maria Santos', 'Av. B, 456 - Rio de Janeiro, RJ'],
+  ];
+  const sheet = XLSX.utils.aoa_to_sheet(data);
+  sheet['!cols'] = [{wch: 25}, {wch: 20}, {wch: 40}];
+  XLSX.utils.book_append_sheet(workbook, sheet, 'CTs');
+  XLSX.writeFile(workbook, 'template_cts.xlsx');
+  toast('Template baixado!');
+}
+
+window.handleFileUpload = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = evt.target.result;
+      const workbook = XLSX.read(data, {type: 'binary'});
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet);
+
+      const tipo = $('upload-tipo').value;
+      const erro = validarPlanilha(rows, tipo);
+      
+      if (erro) {
+        toast(`Erro na planilha: ${erro}`, 'error');
+        return;
+      }
+
+      previewUpload(rows, tipo);
+    } catch(err) {
+      toast(`Erro ao ler arquivo: ${err.message}`, 'error');
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+function validarPlanilha(rows, tipo) {
+  if (!rows || rows.length === 0) return 'Planilha vazia';
+
+  if (tipo === 'lutadores') {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row.Nome || !row.Nome.trim()) return `Linha ${i+2}: Nome é obrigatório`;
+    }
+  } else if (tipo === 'cts') {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row['Nome do CT'] || !row['Nome do CT'].trim()) return `Linha ${i+2}: Nome do CT é obrigatório`;
+    }
+  }
+
+  return null;
+}
+
+function previewUpload(rows, tipo) {
+  uploadData = rows;
+  uploadTipo = tipo;
+  
+  const preview = $('upload-preview');
+  preview.innerHTML = '';
+
+  const table = el('table');
+  table.style.width = '100%';
+  table.style.borderCollapse = 'collapse';
+
+  // Header
+  const thead = el('thead');
+  const tr = el('tr');
+  tr.style.background = 'rgba(230,57,70,.1)';
+  tr.style.borderBottom = '1px solid var(--border)';
+
+  if (tipo === 'lutadores') {
+    ['Nome', 'Instagram', 'Faixa', 'Grau', 'Equipe', 'Idade', 'Peso', 'Altura'].forEach(h => {
+      const th = el('th', '', h);
+      th.style.padding = '8px 12px';
+      th.style.textAlign = 'left';
+      th.style.fontSize = '11px';
+      th.style.fontWeight = '600';
+      th.style.color = 'var(--muted)';
+      tr.appendChild(th);
+    });
+  } else {
+    ['Nome do CT', 'Responsável', 'Endereço'].forEach(h => {
+      const th = el('th', '', h);
+      th.style.padding = '8px 12px';
+      th.style.textAlign = 'left';
+      th.style.fontSize = '11px';
+      th.style.fontWeight = '600';
+      th.style.color = 'var(--muted)';
+      tr.appendChild(th);
+    });
+  }
+  thead.appendChild(tr);
+  table.appendChild(thead);
+
+  // Body
+  const tbody = el('tbody');
+  rows.slice(0, 10).forEach(row => {
+    const tr = el('tr');
+    tr.style.borderBottom = '1px solid var(--border)';
+    tr.style.fontSize = '12px';
+
+    if (tipo === 'lutadores') {
+      [row.Nome || '', row.Instagram || '', row.Faixa || '', row.Grau || '', row.Equipe || '', row.Idade || '', row.Peso || '', row.Altura || ''].forEach(cell => {
+        const td = el('td', '', cell);
+        td.style.padding = '8px 12px';
+        td.style.color = 'var(--text)';
+        tr.appendChild(td);
+      });
+    } else {
+      [row['Nome do CT'] || '', row.Responsável || '', row.Endereço || ''].forEach(cell => {
+        const td = el('td', '', cell);
+        td.style.padding = '8px 12px';
+        td.style.color = 'var(--text)';
+        tr.appendChild(td);
+      });
+    }
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+
+  preview.appendChild(table);
+
+  const info = el('div', '', `<div style="margin-top:12px;padding:12px;background:rgba(45,155,107,.1);border-radius:8px;color:var(--success);font-size:12px">✓ ${rows.length} registro${rows.length>1?'s':''} pronto${rows.length>1?'s':''} para importar</div>`);
+  preview.appendChild(info);
+
+  $('upload-preview-section').style.display = 'block';
+  $('upload-btn-import').disabled = false;
+  $('upload-btn-import').style.opacity = '1';
+  $('upload-btn-import').style.cursor = 'pointer';
+}
+
+window.importarPlanilha = async function() {
+  if (!uploadData || !uploadTipo) {
+    toast('Nenhum arquivo carregado', 'error');
+    return;
+  }
+
+  const rows = uploadData;
+  const tipo = uploadTipo;
+
+  $('upload-btn-import').disabled = true;
+  $('upload-btn-import').textContent = '⏳ Importando...';
+
+  try {
+    const batch = writeBatch(db);
+    const colName = tipo === 'lutadores' ? 'lutadores' : 'cts';
+
+    rows.forEach(row => {
+      if (tipo === 'lutadores') {
+        const data = {
+          nome: (row.Nome || '').trim(),
+          instagram: (row.Instagram || '').trim(),
+          faixa: (row.Faixa || '').trim(),
+          grau: (row.Grau || '').trim(),
+          equipe: (row.Equipe || '').trim(),
+          idade: row.Idade ? String(row.Idade).trim() : '',
+          peso: row.Peso ? String(row.Peso).trim() : '',
+          altura: row.Altura ? String(row.Altura).trim() : '',
+        };
+        batch.set(collection(db, colName).doc(), data);
+      } else {
+        const data = {
+          nome: (row['Nome do CT'] || '').trim(),
+          dono: (row.Responsável || '').trim(),
+          endereco: (row.Endereço || '').trim(),
+        };
+        batch.set(collection(db, colName).doc(), data);
+      }
+    });
+
+    await batch.commit();
+    const plural = tipo === 'lutadores' ? 'lutadores' : 'CTs';
+    toast(`✓ ${rows.length} ${plural} importados com sucesso!`);
+    
+    uploadData = null;
+    uploadTipo = null;
+    closeModal('modal-upload');
+    
+    if (tipo === 'lutadores') {
+      await loadLutadores();
+      showSection('lutadores');
+    } else {
+      await loadCTs();
+      showSection('cts');
+    }
+    renderAll();
+  } catch(e) {
+    toast(`Erro ao importar: ${e.message}`, 'error');
+    $('upload-btn-import').disabled = false;
+    $('upload-btn-import').textContent = '📤 Importar';
+  }
+}
+
 // ── Modal helpers ─────────────────────────────────────
 window.closeModal = function(id) {
   $(id).style.display = 'none';
@@ -1064,6 +1334,38 @@ document.addEventListener('DOMContentLoaded', () => {
   $('search-cts').addEventListener('input', e => {
     ctSearch = e.target.value; renderCTs();
   });
+
+  // Drag and drop para upload
+  const dropZone = $('upload-drop-zone');
+  if (dropZone) {
+    dropZone.addEventListener('click', () => $('upload-file').click());
+    
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.style.background = 'rgba(230,57,70,.1)';
+      dropZone.style.borderColor = 'var(--accent)';
+    });
+    
+    dropZone.addEventListener('dragleave', e => {
+      e.preventDefault();
+      dropZone.style.background = '';
+      dropZone.style.borderColor = 'var(--border)';
+    });
+    
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.style.background = '';
+      dropZone.style.borderColor = 'var(--border)';
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        $('upload-file').files = files;
+        handleFileUpload({target: {files: files}});
+      }
+    });
+  }
+
+  // Atualiza template info quando abre modal
+  // (removido - agora é feito nas funções openUploadLutadores e openUploadCTs)
 
   // Fecha modal clicando fora
   document.querySelectorAll('.modal-overlay').forEach(m => {
@@ -1223,7 +1525,10 @@ document.addEventListener('DOMContentLoaded', () => {
   <section id="lutadores" class="section">
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>LUTADORES</span></div></div>
-      <button class="btn btn-primary" onclick="openLutador()">+ Novo Lutador</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="openUploadLutadores()">📤 Importar Planilha</button>
+        <button class="btn btn-primary" onclick="openLutador()">+ Novo Lutador</button>
+      </div>
     </div>
     <div class="toolbar">
       <input type="text" class="search-box" id="search-lutadores" placeholder="Buscar por nome, equipe, faixa...">
@@ -1245,7 +1550,10 @@ document.addEventListener('DOMContentLoaded', () => {
   <section id="cts" class="section">
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>CTs</span></div></div>
-      <button class="btn btn-primary" onclick="openCT()">+ Novo CT</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="openUploadCTs()">📤 Importar Planilha</button>
+        <button class="btn btn-primary" onclick="openCT()">+ Novo CT</button>
+      </div>
     </div>
     <div class="toolbar">
       <input type="text" class="search-box" id="search-cts" placeholder="Buscar por nome ou responsável...">
@@ -1449,6 +1757,56 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-ct')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveCT()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD PLANILHA -->
+<div id="modal-upload" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">IMPORTAR DE <span>PLANILHA</span></div>
+      <button class="modal-close" onclick="closeModal('modal-upload')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="upload-tipo">
+      
+      <div class="form-section">
+        <div class="form-section-title">Formatos aceitos</div>
+        <div style="display:flex;gap:8px;margin-bottom:20px">
+          <span style="background:rgba(230,57,70,.1);padding:6px 12px;border-radius:6px;font-size:12px;color:var(--accent)">📊 Excel (.xlsx)</span>
+          <span style="background:rgba(230,57,70,.1);padding:6px 12px;border-radius:6px;font-size:12px;color:var(--accent)">📄 CSV</span>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">1. Escolha o arquivo</div>
+        <div style="position:relative;border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;transition:all .2s" id="upload-drop-zone">
+          <div style="font-size:32px;margin-bottom:8px">📁</div>
+          <div style="font-size:12px;color:var(--text);margin-bottom:4px">Clique ou arraste um arquivo aqui</div>
+          <div style="font-size:11px;color:var(--muted)">.xlsx, .xls ou .csv</div>
+          <input type="file" id="upload-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileUpload(event)">
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">2. Visualizar dados</div>
+        <div id="upload-preview-section" style="display:none;border:1px solid var(--border);border-radius:8px;padding:12px;overflow-x:auto;max-height:300px;background:var(--bg3)">
+          <div id="upload-preview"></div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">📋 Estrutura esperada da planilha</div>
+        <div id="upload-template-info" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11px;color:var(--muted);line-height:1.6">
+          <!-- Preenchido dinamicamente -->
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-upload')">Cancelar</button>
+      <button class="btn btn-primary" id="upload-btn-import" onclick="importarPlanilha()" disabled style="opacity:0.5;cursor:not-allowed">📤 Importar</button>
     </div>
   </div>
 </div>
