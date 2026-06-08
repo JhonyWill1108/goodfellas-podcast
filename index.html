@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FellasCast — Controle de Eventos BJJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0a0f;
+    --bg2:       #111118;
+    --bg3:       #18181f;
+    --border:    #2a2a38;
+    --accent:    #e63946;
+    --accent2:   #7b2d8b;
+    --gold:      #f4a261;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --auto-bg:   #13131e;
+    --auto-text: #7878a0;
+    --obs-bg:    #1a160a;
+    --c1:        #7b2d8b;
+    --c2:        #e63946;
+    --ct-col:    #1a6b8b;
+    --success:   #2d9b6b;
+    --font-head: 'Bebas Neue', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --radius:    10px;
+    --shadow:    0 8px 32px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 9999;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    z-index: 100;
+    padding: 0 0 24px;
+  }
+
+  .logo {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-title {
+    font-family: var(--font-head);
+    font-size: 26px;
+    letter-spacing: 2px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .logo-sub {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .nav { flex: 1; padding: 16px 0; }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 24px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    border-left: 3px solid transparent;
+    transition: all .2s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,.03); }
+  .nav-item.active {
+    color: var(--text);
+    border-left-color: var(--accent);
+    background: rgba(230,57,70,.06);
+  }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .nav-section {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    padding: 16px 24px 6px;
+    text-transform: uppercase;
+  }
+
+  .firebase-badge {
+    margin: 0 16px;
+    padding: 10px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .firebase-badge .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 6px var(--success);
+  }
+  .firebase-badge.disconnected .dot { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: 220px;
+    min-height: 100vh;
+    padding: 32px;
+  }
+
+  /* ── HEADER ── */
+  .page-header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    margin-bottom: 28px;
+  }
+  .page-title {
+    font-family: var(--font-head);
+    font-size: 38px;
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  .page-title span { color: var(--accent); }
+
+  /* ── CARDS RESUMO ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--accent); }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .card-value {
+    font-family: var(--font-head);
+    font-size: 44px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .card-label {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .card-icon { font-size: 22px; margin-bottom: 8px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex; gap: 4px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 20px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 8px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all .2s;
+  }
+  .tab.active { background: var(--accent); color: white; }
+  .tab:not(.active):hover { color: var(--text); background: rgba(255,255,255,.04); }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .search-box {
+    flex: 1; max-width: 320px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 9px 14px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 600;
+    transition: all .2s;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #c1121f; transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-danger { background: rgba(230,57,70,.15); color: var(--accent); border: 1px solid rgba(230,57,70,.3); }
+  .btn-danger:hover { background: rgba(230,57,70,.25); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    padding: 12px 14px;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    position: sticky; top: 0;
+    background: var(--bg2);
+    z-index: 1;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(42,42,56,.6);
+    transition: background .15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,.025); }
+  tbody td {
+    padding: 11px 14px;
+    font-size: 13px;
+    color: var(--text);
+    max-width: 200px;
+  }
+
+  .td-auto {
+    color: var(--auto-text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-style: italic;
+  }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-podcast { background: rgba(123,45,139,.25); color: #c77dff; }
+  .badge-luta    { background: rgba(230,57,70,.2);   color: #ff6b6b; }
+  .badge-especial{ background: rgba(244,162,97,.2);  color: var(--gold); }
+
+  .faixa-badge {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(255,255,255,.06);
+    color: var(--auto-text);
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeIn .2s;
+  }
+  @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: 100%; max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow);
+    animation: slideUp .25s cubic-bezier(.16,1,.3,1);
+  }
+  @keyframes slideUp {
+    from { transform: translateY(24px); opacity: 0 }
+    to   { transform: translateY(0);    opacity: 1 }
+  }
+
+  .modal-header {
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title {
+    font-family: var(--font-head);
+    font-size: 26px;
+    letter-spacing: 1px;
+  }
+  .modal-title span { color: var(--accent); }
+  .modal-close {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+  }
+  .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+
+  .modal-body { padding: 24px 28px; }
+  .modal-footer {
+    padding: 16px 28px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 10px;
+  }
+
+  /* ── FORM ── */
+  .form-section {
+    margin-bottom: 24px;
+  }
+  .form-section-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .form-section-title.c1 { color: #c77dff; border-color: rgba(123,45,139,.4); }
+  .form-section-title.c2 { color: #ff6b6b; border-color: rgba(230,57,70,.4); }
+  .form-section-title.ct { color: #5bc0de; border-color: rgba(26,107,139,.4); }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-full { grid-column: 1 / -1; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .8px;
+  }
+  .form-label .auto-tag {
+    color: var(--auto-text);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .form-input, .form-select {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 13px;
+    outline: none;
+    transition: border-color .2s;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--muted); }
+  .form-input[readonly] {
+    background: var(--auto-bg);
+    color: var(--auto-text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-style: italic;
+    cursor: default;
+  }
+  .form-input.obs {
+    background: var(--obs-bg);
+    border-color: rgba(244,162,97,.2);
+  }
+  .form-input.obs:focus { border-color: var(--gold); }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; }
+
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    z-index: 9000;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+    box-shadow: var(--shadow);
+    animation: slideUp .25s cubic-bezier(.16,1,.3,1);
+    display: flex; align-items: center; gap: 10px;
+    min-width: 220px;
+  }
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error   { border-left: 3px solid var(--accent); }
+
+  /* ── LOADING ── */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg) } }
+
+  /* ── SETUP SCREEN ── */
+  .setup-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+    padding: 32px;
+  }
+  .setup-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%; max-width: 540px;
+    box-shadow: var(--shadow);
+  }
+  .setup-title {
+    font-family: var(--font-head);
+    font-size: 36px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+  .setup-sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+  .setup-step {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .setup-step strong { color: var(--text); }
+  .setup-step code {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--gold);
+    font-size: 11px;
+  }
+
+  /* ── PAGINATION ── */
+  .pagination {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 16px;
+    justify-content: center;
+  }
+  .page-btn {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+    transition: all .2s;
+  }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .page-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .sidebar { width: 60px; }
+    .sidebar .logo-title, .sidebar .logo-sub,
+    .nav-item span, .nav-section, .firebase-badge { display: none; }
+    .main { margin-left: 60px; padding: 20px 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid-3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  .tag { display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, onSnapshot, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ══════════════════════════════════════════════════════
+// 🔥 CONFIGURAÇÃO FIREBASE — substitua pelos seus dados
+// ══════════════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCDQDU4TZGFAneHSDRWL117_aFpwuhIdQE",
+  authDomain: "fellascast.firebaseapp.com",
+  projectId: "fellascast",
+  storageBucket: "fellascast.firebasestorage.app",
+  messagingSenderId: "214101637144",
+  appId: "1:214101637144:web:e0fd3b46b158e8fa8f6b6d"
+};
+// ══════════════════════════════════════════════════════
+
+const CONFIGURED = !FIREBASE_CONFIG.apiKey.includes("SUA_");
+
+let db, app;
+let eventos = [], lutadores = [], cts = [];
+let eventoEditId = null, lutadorEditId = null, ctEditId = null;
+
+// ── Estado da UI ──────────────────────────────────────
+let currentSection  = 'painel';
+let eventoPage      = 1; const PER_PAGE = 15;
+let eventoSearch    = '';
+let lutadorSearch   = '';
+let ctSearch        = '';
+
+// ── DOM helpers ───────────────────────────────────────
+const $  = id => document.getElementById(id);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if(cls) e.className=cls; if(html) e.innerHTML=html; return e; };
+
+function toast(msg, type='success') {
+  const t = el('div', `toast ${type}`, `<span>${type==='success'?'✓':'✕'}</span> ${msg}`);
+  $('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Firebase Init ─────────────────────────────────────
+async function initFirebase() {
+  if (!CONFIGURED) { showSetup(); return; }
+  try {
+    app = initializeApp(FIREBASE_CONFIG);
+    db  = getFirestore(app);
+    updateFirebaseBadge(true);
+    await loadAll();
+    showSection('painel');
+  } catch(e) {
+    console.error(e);
+    updateFirebaseBadge(false);
+    toast('Erro ao conectar ao Firebase. Verifique a configuração.', 'error');
+    showSetup();
+  }
+}
+
+function updateFirebaseBadge(ok) {
+  const b = $('firebase-badge');
+  b.className = ok ? 'firebase-badge' : 'firebase-badge disconnected';
+  b.innerHTML = `<span class="dot"></span>${ok ? 'Firebase conectado' : 'Não configurado'}`;
+}
+
+// ── Load Data ─────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadEventos(), loadLutadores(), loadCTs()]);
+  renderAll();
+}
+
+async function loadEventos() {
+  const snap = await getDocs(query(collection(db,'eventos'), orderBy('numero','asc')));
+  eventos = snap.docs.map(d => ({id:d.id,...d.data()}));
+}
+async function loadLutadores() {
+  const snap = await getDocs(query(collection(db,'lutadores'), orderBy('nome','asc')));
+  lutadores = snap.docs.map(d => ({id:d.id,...d.data()}));
+}
+async function loadCTs() {
+  const snap = await getDocs(query(collection(db,'cts'), orderBy('nome','asc')));
+  cts = snap.docs.map(d => ({id:d.id,...d.data()}));
+}
+
+function renderAll() {
+  renderPainel();
+  renderEventos();
+  renderLutadores();
+  renderCTs();
+}
+
+// ── Helpers ───────────────────────────────────────────
+function getLutador(nome) { return lutadores.find(l => l.nome === nome) || {}; }
+function getCT(nome)      { return cts.find(c => c.nome === nome) || {}; }
+
+function graduacao(l) {
+  if (!l.faixa) return '';
+  let g = l.faixa;
+  if (l.grau)   g += ` - ${l.grau}`;
+  if (l.equipe) g += ` - ${l.equipe}`;
+  return g;
+}
+function especificacoes(l) {
+  const parts = [];
+  if (l.idade)  parts.push(`Idade: ${l.idade}`);
+  if (l.peso)   parts.push(`Peso: ${l.peso}kg`);
+  if (l.altura) parts.push(`Alt: ${l.altura}cm`);
+  return parts.join(' | ');
+}
+
+function badgeEvento(tipo) {
+  const map = { PODCAST:'podcast', LUTA:'luta', ESPECIAL:'especial' };
+  const cls = map[tipo] || 'podcast';
+  return `<span class="badge badge-${cls}">${tipo||'-'}</span>`;
+}
+
+// ── PAINEL ────────────────────────────────────────────
+function renderPainel() {
+  const total    = eventos.length;
+  const podcasts = eventos.filter(e=>e.tipo==='PODCAST').length;
+  const lutas    = eventos.filter(e=>e.tipo==='LUTA').length;
+  const especiais= eventos.filter(e=>e.tipo==='ESPECIAL').length;
+  const comLink  = eventos.filter(e=>e.link).length;
+
+  $('c-total').textContent    = total;
+  $('c-podcast').textContent  = podcasts;
+  $('c-lutas').textContent    = lutas;
+  $('c-especiais').textContent= especiais;
+  $('c-lutadores').textContent= lutadores.length;
+  $('c-cts').textContent      = cts.length;
+  $('c-links').textContent    = comLink;
+
+  // Próximos eventos
+  const tbody = $('proximos-tbody');
+  tbody.innerHTML = '';
+  const hoje = new Date();
+  const proximos = eventos
+    .filter(e => {
+      if (!e.data) return false;
+      const [d,m,y] = e.data.split('/');
+      return new Date(`20${y}-${m}-${d}`) >= hoje;
+    })
+    .slice(0,5);
+
+  if (!proximos.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Nenhum evento futuro</td></tr>`;
+    return;
+  }
+  proximos.forEach(e => {
+    const tr = el('tr');
+    tr.innerHTML = `
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.data||'-'}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.horario||'-'}</td>
+      <td>${badgeEvento(e.tipo)}</td>
+      <td>${e.nomeC1||'-'}</td>
+      <td>${e.nomeC2||'-'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── EVENTOS ───────────────────────────────────────────
+function renderEventos() {
+  const tbody = $('eventos-tbody');
+  tbody.innerHTML = '';
+
+  const filtered = eventos.filter(e => {
+    const q = eventoSearch.toLowerCase();
+    return !q || (e.data||'').includes(q) || (e.tipo||'').toLowerCase().includes(q)
+      || (e.nomeC1||'').toLowerCase().includes(q) || (e.nomeC2||'').toLowerCase().includes(q)
+      || (e.ct||'').toLowerCase().includes(q);
+  });
+
+  const total = filtered.length;
+  const pages = Math.ceil(total / PER_PAGE) || 1;
+  eventoPage  = Math.min(eventoPage, pages);
+  const slice = filtered.slice((eventoPage-1)*PER_PAGE, eventoPage*PER_PAGE);
+
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🥋</div><div class="empty-text">Nenhum evento encontrado</div></div></td></tr>`;
+  } else {
+    slice.forEach(e => {
+      const l1 = getLutador(e.nomeC1||'');
+      const l2 = getLutador(e.nomeC2||'');
+      const tr = el('tr');
+      tr.innerHTML = `
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.numero||'-'}</td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted);white-space:nowrap">${e.data||'-'}</td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.horario||'-'}</td>
+        <td>${badgeEvento(e.tipo)}</td>
+        <td>
+          <div style="font-weight:500">${e.nomeC1||'-'}</div>
+          ${l1.faixa ? `<div class="td-auto">${graduacao(l1)}</div>` : ''}
+          ${e.obsC1 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC1}</div>` : ''}
+        </td>
+        <td>
+          <div style="font-weight:500">${e.nomeC2||'-'}</div>
+          ${l2.faixa ? `<div class="td-auto">${graduacao(l2)}</div>` : ''}
+          ${e.obsC2 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC2}</div>` : ''}
+        </td>
+        <td style="color:var(--muted);font-size:12px">${e.ct||'-'}</td>
+        <td>${e.link ? `<a href="${e.link}" target="_blank" style="color:var(--accent);font-size:11px;font-family:var(--font-mono)">▶ Link</a>` : '-'}</td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="openEvento('${e.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteEvento('${e.id}')">🗑</button>
+          </div>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // Paginação
+  const pg = $('eventos-pagination');
+  pg.innerHTML = '';
+  if (pages > 1) {
+    for (let i=1; i<=pages; i++) {
+      const b = el('button', `page-btn${i===eventoPage?' active':''}`, i);
+      b.onclick = () => { eventoPage=i; renderEventos(); };
+      pg.appendChild(b);
+    }
+  }
+
+  $('eventos-count').textContent = `${total} evento${total!==1?'s':''}`;
+}
+
+// ── LUTADORES ─────────────────────────────────────────
+function renderLutadores() {
+  const tbody = $('lutadores-tbody');
+  tbody.innerHTML = '';
+
+  const filtered = lutadores.filter(l => {
+    const q = lutadorSearch.toLowerCase();
+    return !q || (l.nome||'').toLowerCase().includes(q) || (l.equipe||'').toLowerCase().includes(q) || (l.faixa||'').toLowerCase().includes(q);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum lutador encontrado</div></div></td></tr>`;
+    return;
+  }
+
+  filtered.forEach(l => {
+    const tr = el('tr');
+    tr.innerHTML = `
+      <td style="font-weight:500">${l.nome||'-'}</td>
+      <td style="font-size:11px;color:var(--muted)">${l.instagram ? '@'+l.instagram : '-'}</td>
+      <td>${l.faixa ? `<span class="faixa-badge">${l.faixa}${l.grau?' '+l.grau:''}</span>` : '-'}</td>
+      <td style="font-size:12px;color:var(--muted)">${l.equipe||'-'}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.idade||'-'}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.peso ? l.peso+'kg' : '-'}</td>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.altura ? l.altura+'cm' : '-'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openLutador('${l.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteLutador('${l.id}')">🗑</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── CTs ───────────────────────────────────────────────
+function renderCTs() {
+  const tbody = $('cts-tbody');
+  tbody.innerHTML = '';
+
+  const filtered = cts.filter(c => {
+    const q = ctSearch.toLowerCase();
+    return !q || (c.nome||'').toLowerCase().includes(q) || (c.dono||'').toLowerCase().includes(q);
+  });
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">🏟</div><div class="empty-text">Nenhum CT encontrado</div></div></td></tr>`;
+    return;
+  }
+
+  filtered.forEach(c => {
+    const tr = el('tr');
+    tr.innerHTML = `
+      <td style="font-weight:500">${c.nome||'-'}</td>
+      <td style="font-size:12px;color:var(--muted)">${c.dono||'-'}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:300px">${c.endereco||'-'}</td>
+      <td>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openCT('${c.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteCT('${c.id}')">🗑</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── MODALS ────────────────────────────────────────────
+const FAIXAS = ['BRANCA','CINZA','CINZA/PRETA','AMARELA','AMARELA/PRETA','LARANJA','LARANJA/PRETA','VERDE','VERDE/PRETA','AZUL','ROXA','MARROM','PRETA','CORAL','VERMELHA'];
+const GRAUS  = ['','1°','2°','3°','4°','5°','6°','7°','8°','9°','10°'];
+const TIPOS  = ['PODCAST','LUTA','ESPECIAL'];
+const HORARIOS = ['19:00','19:30','20:00','20:30','21:00'];
+
+function selectOptions(arr, val='', placeholder='') {
+  let o = placeholder ? `<option value="">${placeholder}</option>` : '';
+  arr.forEach(a => o += `<option value="${a}"${a===val?' selected':''}>${a}</option>`);
+  return o;
+}
+
+// Evento
+window.openEvento = function(id=null) {
+  eventoEditId = id;
+  const e = id ? eventos.find(x=>x.id===id) : {};
+  const maxN = eventos.length ? Math.max(...eventos.map(x=>x.numero||0))+1 : 1;
+
+  $('modal-evento-title').innerHTML = id ? 'EDITAR <span>EVENTO</span>' : 'NOVO <span>EVENTO</span>';
+
+  // Preenche form
+  $('ev-numero').value  = e.numero || maxN;
+  $('ev-data').value    = e.data   || '';
+  $('ev-horario').innerHTML = selectOptions(HORARIOS, e.horario||'19:00');
+  $('ev-tipo').innerHTML    = selectOptions(TIPOS, e.tipo||'PODCAST');
+  $('ev-nomeC1').innerHTML  = selectOptions(lutadores.map(l=>l.nome), e.nomeC1||'', '— Selecione —');
+  $('ev-nomeC2').innerHTML  = selectOptions(lutadores.map(l=>l.nome), e.nomeC2||'', '— Nenhum —');
+  $('ev-obsC1').value   = e.obsC1  || '';
+  $('ev-obsC2').value   = e.obsC2  || '';
+  $('ev-ct').innerHTML  = selectOptions(cts.map(c=>c.nome), e.ct||'', '— Selecione —');
+  $('ev-link').value    = e.link   || '';
+
+  updateAutoEvento();
+  $('modal-evento').style.display = 'flex';
+}
+
+function updateAutoEvento() {
+  const l1 = getLutador($('ev-nomeC1').value);
+  const l2 = getLutador($('ev-nomeC2').value);
+  const ct = getCT($('ev-ct').value);
+
+  $('ev-instaC1').value = l1.instagram ? '@'+l1.instagram : '';
+  $('ev-gradC1').value  = graduacao(l1);
+  $('ev-especC1').value = especificacoes(l1);
+  $('ev-instaC2').value = l2.instagram ? '@'+l2.instagram : '';
+  $('ev-gradC2').value  = graduacao(l2);
+  $('ev-especC2').value = especificacoes(l2);
+  $('ev-endereco').value = ct.endereco || '';
+}
+
+window.saveEvento = async function() {
+  const data = {
+    numero:   parseInt($('ev-numero').value) || 0,
+    data:     $('ev-data').value,
+    horario:  $('ev-horario').value,
+    tipo:     $('ev-tipo').value,
+    nomeC1:   $('ev-nomeC1').value,
+    nomeC2:   $('ev-nomeC2').value,
+    obsC1:    $('ev-obsC1').value,
+    obsC2:    $('ev-obsC2').value,
+    ct:       $('ev-ct').value,
+    link:     $('ev-link').value,
+  };
+  try {
+    if (eventoEditId) {
+      await updateDoc(doc(db,'eventos',eventoEditId), data);
+      toast('Evento atualizado!');
+    } else {
+      await addDoc(collection(db,'eventos'), data);
+      toast('Evento salvo!');
+    }
+    closeModal('modal-evento');
+    await loadEventos();
+    renderAll();
+  } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
+}
+
+window.deleteEvento = async function(id) {
+  if (!confirm('Excluir este evento?')) return;
+  await deleteDoc(doc(db,'eventos',id));
+  toast('Evento excluído!');
+  await loadEventos(); renderAll();
+}
+
+// Lutador
+window.openLutador = function(id=null) {
+  lutadorEditId = id;
+  const l = id ? lutadores.find(x=>x.id===id) : {};
+  $('modal-lutador-title').innerHTML = id ? 'EDITAR <span>LUTADOR</span>' : 'NOVO <span>LUTADOR</span>';
+  $('lt-nome').value     = l.nome     || '';
+  $('lt-instagram').value= l.instagram|| '';
+  $('lt-faixa').innerHTML= selectOptions(FAIXAS, l.faixa||'', '— Selecione —');
+  $('lt-grau').innerHTML = selectOptions(GRAUS,  l.grau ||'', '— Sem grau —');
+  $('lt-equipe').value   = l.equipe   || '';
+  $('lt-idade').value    = l.idade    || '';
+  $('lt-peso').value     = l.peso     || '';
+  $('lt-altura').value   = l.altura   || '';
+  $('modal-lutador').style.display = 'flex';
+}
+
+window.saveLutador = async function() {
+  const data = {
+    nome:      $('lt-nome').value.trim(),
+    instagram: $('lt-instagram').value.trim(),
+    faixa:     $('lt-faixa').value,
+    grau:      $('lt-grau').value,
+    equipe:    $('lt-equipe').value.trim(),
+    idade:     $('lt-idade').value,
+    peso:      $('lt-peso').value,
+    altura:    $('lt-altura').value,
+  };
+  if (!data.nome) { toast('Nome obrigatório','error'); return; }
+  try {
+    if (lutadorEditId) {
+      await updateDoc(doc(db,'lutadores',lutadorEditId), data);
+      toast('Lutador atualizado!');
+    } else {
+      await addDoc(collection(db,'lutadores'), data);
+      toast('Lutador cadastrado!');
+    }
+    closeModal('modal-lutador');
+    await loadLutadores(); renderAll();
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+window.deleteLutador = async function(id) {
+  if (!confirm('Excluir este lutador?')) return;
+  await deleteDoc(doc(db,'lutadores',id));
+  toast('Lutador excluído!');
+  await loadLutadores(); renderAll();
+}
+
+// CT
+window.openCT = function(id=null) {
+  ctEditId = id;
+  const c = id ? cts.find(x=>x.id===id) : {};
+  $('modal-ct-title').innerHTML = id ? 'EDITAR <span>CT</span>' : 'NOVO <span>CT</span>';
+  $('ct-nome').value    = c.nome    || '';
+  $('ct-dono').value    = c.dono    || '';
+  $('ct-endereco').value= c.endereco|| '';
+  $('modal-ct').style.display = 'flex';
+}
+
+window.saveCT = async function() {
+  const data = {
+    nome:     $('ct-nome').value.trim(),
+    dono:     $('ct-dono').value.trim(),
+    endereco: $('ct-endereco').value.trim(),
+  };
+  if (!data.nome) { toast('Nome obrigatório','error'); return; }
+  try {
+    if (ctEditId) {
+      await updateDoc(doc(db,'cts',ctEditId), data);
+      toast('CT atualizado!');
+    } else {
+      await addDoc(collection(db,'cts'), data);
+      toast('CT cadastrado!');
+    }
+    closeModal('modal-ct');
+    await loadCTs(); renderAll();
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+window.deleteCT = async function(id) {
+  if (!confirm('Excluir este CT?')) return;
+  await deleteDoc(doc(db,'cts',id));
+  toast('CT excluído!');
+  await loadCTs(); renderAll();
+}
+
+// ── Modal helpers ─────────────────────────────────────
+window.closeModal = function(id) {
+  $(id).style.display = 'none';
+}
+
+// ── Navegação ─────────────────────────────────────────
+window.showSection = function(s) {
+  currentSection = s;
+  document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  $(s).classList.add('active');
+  document.querySelector(`[data-section="${s}"]`)?.classList.add('active');
+}
+
+function showSetup() {
+  document.querySelector('.sidebar').style.display = 'none';
+  $('painel').innerHTML = '';
+  $('setup-screen').style.display = 'flex';
+  $('painel').classList.add('active');
+}
+
+// ── Event listeners ───────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  $('ev-nomeC1').addEventListener('change', updateAutoEvento);
+  $('ev-nomeC2').addEventListener('change', updateAutoEvento);
+  $('ev-ct').addEventListener('change', updateAutoEvento);
+
+  $('search-eventos').addEventListener('input', e => {
+    eventoSearch = e.target.value; eventoPage = 1; renderEventos();
+  });
+  $('search-lutadores').addEventListener('input', e => {
+    lutadorSearch = e.target.value; renderLutadores();
+  });
+  $('search-cts').addEventListener('input', e => {
+    ctSearch = e.target.value; renderCTs();
+  });
+
+  // Fecha modal clicando fora
+  document.querySelectorAll('.modal-overlay').forEach(m => {
+    m.addEventListener('click', e => { if(e.target===m) m.style.display='none'; });
+  });
+
+  initFirebase();
+});
+</script>
+
+<!-- ════ HTML ════ -->
+<div id="setup-screen" class="setup-screen" style="display:none">
+  <div class="setup-card">
+    <div class="setup-title">🔥 CONFIGURAR <span style="color:var(--accent)">FIREBASE</span></div>
+    <p class="setup-sub">Para usar o app, você precisa configurar seu projeto Firebase. Siga os passos abaixo e edite o arquivo <code style="font-family:var(--font-mono);background:var(--bg3);padding:2px 6px;border-radius:4px;color:var(--gold)">index.html</code>.</p>
+    <div class="setup-step">
+      <strong>1.</strong> Acesse <strong>console.firebase.google.com</strong> e crie um projeto
+    </div>
+    <div class="setup-step">
+      <strong>2.</strong> Ative o <strong>Firestore Database</strong> no modo de produção
+    </div>
+    <div class="setup-step">
+      <strong>3.</strong> Em <strong>Configurações do projeto → Seus apps</strong>, clique em <strong>Web (&lt;/&gt;)</strong> e copie o <code>firebaseConfig</code>
+    </div>
+    <div class="setup-step">
+      <strong>4.</strong> Cole os valores na variável <code>FIREBASE_CONFIG</code> no início do script deste arquivo
+    </div>
+    <div class="setup-step">
+      <strong>5.</strong> Nas <strong>Regras do Firestore</strong>, permita leitura e escrita temporariamente:<br>
+      <code>allow read, write: if true;</code>
+    </div>
+    <div class="setup-step">
+      <strong>6.</strong> Faça o deploy no GitHub Pages e acesse o link gerado
+    </div>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-title">FELLAS<span style="color:var(--accent)">CAST</span></div>
+    <div class="logo-sub">BJJ Events Control</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Menu</div>
+    <div class="nav-item active" data-section="painel" onclick="showSection('painel')">
+      <span class="icon">📊</span><span>Painel</span>
+    </div>
+    <div class="nav-item" data-section="eventos" onclick="showSection('eventos')">
+      <span class="icon">📅</span><span>Eventos</span>
+    </div>
+    <div class="nav-section">Cadastros</div>
+    <div class="nav-item" data-section="lutadores" onclick="showSection('lutadores')">
+      <span class="icon">🥋</span><span>Lutadores</span>
+    </div>
+    <div class="nav-item" data-section="cts" onclick="showSection('cts')">
+      <span class="icon">🏟</span><span>CTs</span>
+    </div>
+  </nav>
+  <div id="firebase-badge" class="firebase-badge disconnected">
+    <span class="dot"></span>Não configurado
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- ── PAINEL ── -->
+  <section id="painel" class="section active">
+    <div class="page-header">
+      <div>
+        <div class="page-title">PAINEL <span>RESUMO</span></div>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-icon">📅</div>
+        <div class="card-value" id="c-total">0</div>
+        <div class="card-label">Total de Eventos</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎙</div>
+        <div class="card-value" id="c-podcast">0</div>
+        <div class="card-label">Podcasts</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚔️</div>
+        <div class="card-value" id="c-lutas">0</div>
+        <div class="card-label">Lutas</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⭐</div>
+        <div class="card-value" id="c-especiais">0</div>
+        <div class="card-label">Especiais</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🥋</div>
+        <div class="card-value" id="c-lutadores">0</div>
+        <div class="card-label">Lutadores</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏟</div>
+        <div class="card-value" id="c-cts">0</div>
+        <div class="card-label">CTs</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">▶️</div>
+        <div class="card-value" id="c-links">0</div>
+        <div class="card-label">Com Link da Live</div>
+      </div>
+    </div>
+
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--font-head);font-size:18px;letter-spacing:1px">
+        PRÓXIMOS <span style="color:var(--accent)">EVENTOS</span>
+      </div>
+      <div class="table-wrap" style="border:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th><th>Hora</th><th>Tipo</th><th>Convidado 1</th><th>Convidado 2</th>
+            </tr>
+          </thead>
+          <tbody id="proximos-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── EVENTOS ── -->
+  <section id="eventos" class="section">
+    <div class="page-header">
+      <div>
+        <div class="page-title">REGISTRO DE <span>EVENTOS</span></div>
+        <div style="color:var(--muted);font-size:12px;margin-top:4px" id="eventos-count"></div>
+      </div>
+      <button class="btn btn-primary" onclick="openEvento()">+ Novo Evento</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search-box" id="search-eventos" placeholder="Buscar por data, tipo, lutador...">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>N°</th><th>Data</th><th>Hora</th><th>Tipo</th>
+            <th>Convidado 1</th><th>Convidado 2</th>
+            <th>CT</th><th>Live</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="eventos-tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="eventos-pagination"></div>
+  </section>
+
+  <!-- ── LUTADORES ── -->
+  <section id="lutadores" class="section">
+    <div class="page-header">
+      <div><div class="page-title">CADASTRO DE <span>LUTADORES</span></div></div>
+      <button class="btn btn-primary" onclick="openLutador()">+ Novo Lutador</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search-box" id="search-lutadores" placeholder="Buscar por nome, equipe, faixa...">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th><th>Instagram</th><th>Faixa / Grau</th><th>Equipe</th>
+            <th>Idade</th><th>Peso</th><th>Altura</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="lutadores-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── CTs ── -->
+  <section id="cts" class="section">
+    <div class="page-header">
+      <div><div class="page-title">CADASTRO DE <span>CTs</span></div></div>
+      <button class="btn btn-primary" onclick="openCT()">+ Novo CT</button>
+    </div>
+    <div class="toolbar">
+      <input type="text" class="search-box" id="search-cts" placeholder="Buscar por nome ou responsável...">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Nome do CT</th><th>Responsável</th><th>Endereço</th><th></th></tr>
+        </thead>
+        <tbody id="cts-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<!-- ════ MODALS ════ -->
+
+<!-- EVENTO -->
+<div id="modal-evento" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-evento-title">NOVO <span>EVENTO</span></div>
+      <button class="modal-close" onclick="closeModal('modal-evento')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-section">
+        <div class="form-section-title">Informações do Evento</div>
+        <div class="form-grid form-grid-3">
+          <div class="form-group">
+            <label class="form-label">N°</label>
+            <input type="number" class="form-input" id="ev-numero">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data</label>
+            <input type="text" class="form-input" id="ev-data" placeholder="DD/MM/AA">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Horário</label>
+            <select class="form-select" id="ev-horario"></select>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Tipo de Evento</label>
+            <select class="form-select" id="ev-tipo"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title c1">Convidado 1</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <select class="form-select" id="ev-nomeC1"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-instaC1" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Graduação <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-gradC1" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Especificações <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-especC1" readonly>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Observações</label>
+            <input type="text" class="form-input obs" id="ev-obsC1" placeholder="Texto livre...">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title c2">Convidado 2</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Nome</label>
+            <select class="form-select" id="ev-nomeC2"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-instaC2" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Graduação <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-gradC2" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Especificações <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-especC2" readonly>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Observações</label>
+            <input type="text" class="form-input obs" id="ev-obsC2" placeholder="Texto livre...">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title ct">Local & Link</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">CT (Local)</label>
+            <select class="form-select" id="ev-ct"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endereço <span class="auto-tag">✦ auto</span></label>
+            <input type="text" class="form-input" id="ev-endereco" readonly>
+          </div>
+          <div class="form-group form-full">
+            <label class="form-label">Link da Live</label>
+            <input type="text" class="form-input" id="ev-link" placeholder="https://youtube.com/live/...">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-evento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEvento()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- LUTADOR -->
+<div id="modal-lutador" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-lutador-title">NOVO <span>LUTADOR</span></div>
+      <button class="modal-close" onclick="closeModal('modal-lutador')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group form-full">
+          <label class="form-label">Nome completo</label>
+          <input type="text" class="form-input" id="lt-nome" placeholder="Nome do lutador">
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Instagram</label>
+          <input type="text" class="form-input" id="lt-instagram" placeholder="sem o @">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Faixa</label>
+          <select class="form-select" id="lt-faixa"></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Grau</label>
+          <select class="form-select" id="lt-grau"></select>
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Equipe</label>
+          <input type="text" class="form-input" id="lt-equipe" placeholder="Nome da equipe">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Idade</label>
+          <input type="number" class="form-input" id="lt-idade" placeholder="anos">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Peso (kg)</label>
+          <input type="number" class="form-input" id="lt-peso" placeholder="kg">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Altura (cm)</label>
+          <input type="number" class="form-input" id="lt-altura" placeholder="cm">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-lutador')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLutador()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CT -->
+<div id="modal-ct" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-ct-title">NOVO <span>CT</span></div>
+      <button class="modal-close" onclick="closeModal('modal-ct')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <div class="form-group">
+          <label class="form-label">Nome do CT</label>
+          <input type="text" class="form-input" id="ct-nome" placeholder="Nome do centro de treinamento">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Dono / Responsável</label>
+          <input type="text" class="form-input" id="ct-dono" placeholder="Nome do responsável">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Endereço completo</label>
+          <input type="text" class="form-input" id="ct-endereco" placeholder="Rua, número, bairro, cidade">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ct')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCT()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toasts"></div>
+
+</body>
+</html>
