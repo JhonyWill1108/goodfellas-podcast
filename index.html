@@ -549,20 +549,245 @@
   .page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
   .page-btn:hover:not(.active) { border-color: var(--text); color: var(--text); }
 
-  /* ── RESPONSIVE ── */
-  @media (max-width: 768px) {
+  /* ── SECTION MAX-WIDTH ── */
+  .section {
+    display: none;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  .section.active {
+    display: block;
+  }
+
+  .tag { display: inline-block; }
+
+  /* ── CARD HOVER ANIMATIONS ── */
+  .card {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(230, 57, 70, 0.15);
+  }
+
+  /* ── PAGE HEADER ACTIONS ── */
+  .page-header-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  /* ── CUSTOM SCROLLBARS ── */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--bg2);
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg2);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
+
+  /* ── TABLE RESPONSIVENESS ── */
+  #eventos table { min-width: 1000px; }
+  #lutadores table { min-width: 900px; }
+  #cts table { min-width: 800px; }
+  #painel table { min-width: 700px; }
+  #upload-preview table { min-width: 600px; }
+
+  /* ── MOBILE RESPONSIVENESS ── */
+  .mobile-header {
+    display: none;
+  }
+
+  /* ── RESPONSIVE (TABLET: 576px a 992px) ── */
+  @media (max-width: 992px) {
     .sidebar { width: 60px; }
-    .sidebar .logo-title, .sidebar .logo-sub,
-    .nav-item span, .nav-section, .firebase-badge { display: none; }
+    .sidebar .logo { display: none; }
+    .nav-section, .firebase-badge, .nav-item span:not(.icon) { display: none; }
+    .nav-item { padding: 12px 0; justify-content: center; }
     .main { margin-left: 60px; padding: 20px 16px; }
     .form-grid { grid-template-columns: 1fr; }
     .form-grid-3 { grid-template-columns: 1fr 1fr; }
   }
 
-  .section { display: none; }
-  .section.active { display: block; }
-
-  .tag { display: inline-block; }
+  /* ── RESPONSIVE (MOBILE: <= 576px) ── */
+  @media (max-width: 576px) {
+    .mobile-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 52px;
+      background: rgba(17, 17, 24, 0.9) !important;
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .mobile-header .logo-title {
+      font-family: var(--font-head);
+      font-size: 22px;
+      letter-spacing: 1.5px;
+    }
+    
+    .sidebar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0; top: auto;
+      width: 100% !important;
+      height: 60px;
+      background: rgba(17, 17, 24, 0.9) !important;
+      backdrop-filter: blur(10px);
+      flex-direction: row;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      padding: 0;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+      box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
+    }
+    .sidebar .logo {
+      display: none;
+    }
+    .sidebar .nav {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      margin: 0;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .sidebar .nav-section {
+      display: none;
+    }
+    .sidebar .nav-item {
+      flex-direction: column;
+      padding: 6px 0;
+      flex: 1;
+      justify-content: center;
+      align-items: center;
+      border-left: none;
+      border-top: 3px solid transparent;
+      font-size: 10px;
+      gap: 2px;
+      height: 100%;
+    }
+    .sidebar .nav-item.active {
+      border-top-color: var(--accent);
+      border-left-color: transparent;
+      background: rgba(230, 57, 70, 0.05);
+    }
+    .sidebar .nav-item .icon {
+      font-size: 18px;
+      width: auto;
+    }
+    .sidebar .nav-item span:not(.icon) {
+      display: block !important;
+    }
+    .sidebar .firebase-badge {
+      display: none;
+    }
+    
+    .main {
+      margin-left: 0 !important;
+      padding: 72px 16px 80px !important;
+    }
+    
+    .page-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .page-header div {
+      width: 100%;
+    }
+    .page-header button, .page-header .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    .page-header style {
+      width: 100%;
+    }
+    
+    .page-header-actions {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+    }
+    
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    .search-box {
+      max-width: 100% !important;
+    }
+    
+    .form-grid, .form-grid-3 {
+      grid-template-columns: 1fr !important;
+      gap: 10px;
+    }
+    .form-full {
+      grid-column: 1 !important;
+    }
+    
+    .modal-overlay {
+      padding: 10px;
+    }
+    .modal {
+      max-width: 100% !important;
+      margin: 0;
+      max-height: 95vh;
+      border-radius: 12px;
+    }
+    .modal-header, .modal-body, .modal-footer {
+      padding: 16px 20px !important;
+    }
+    .modal-title {
+      font-size: 22px;
+    }
+    
+    .cards-grid {
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      padding: 16px;
+    }
+    .card-value {
+      font-size: 32px;
+    }
+    
+    .highlight-card {
+      padding: 16px;
+    }
+    
+    .setup-screen {
+      padding: 16px;
+    }
+    .setup-card {
+      padding: 24px 16px;
+    }
+    .setup-title {
+      font-size: 28px;
+    }
+  }
 
   /* ── WEEKLY HIGHLIGHTS ── */
   .weekly-highlights {
@@ -579,11 +804,15 @@
     padding: 24px;
     position: relative;
     overflow: hidden;
-    transition: all .2s;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   }
   .highlight-card:hover {
     border-color: var(--accent);
-    transform: translateY(-2px);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(123, 45, 139, 0.15);
+  }
+  .highlight-card.match-card:hover {
+    box-shadow: 0 12px 24px rgba(244, 162, 97, 0.15);
   }
   .highlight-card::before {
     content: '';
@@ -600,6 +829,7 @@
     margin-bottom: 16px;
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
   }
   .highlight-card-title span {
@@ -616,6 +846,8 @@
     justify-content: space-between;
     border-bottom: 1px solid rgba(255,255,255,0.05);
     padding-bottom: 6px;
+    flex-wrap: wrap;
+    gap: 4px;
   }
   .highlight-detail-label {
     color: var(--muted);
@@ -623,11 +855,15 @@
   .highlight-detail-value {
     font-weight: 500;
     color: var(--text);
+    word-break: break-word;
   }
   .highlight-detail-value.vs {
     font-family: var(--font-head);
     color: var(--gold);
     font-size: 18px;
+    text-align: center;
+    line-height: 1.2;
+    width: 100%;
   }
   .highlight-address-alert {
     background: rgba(244,162,97,0.1);
@@ -653,9 +889,36 @@
     text-transform: uppercase;
     font-family: var(--font-mono);
   }
+
+  /* ── MICRO-ANIMATIONS ── */
+  .btn {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .btn:hover {
+    transform: translateY(-2px);
+  }
+  .btn:active {
+    transform: translateY(0);
+  }
+  .nav-item {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+  .nav-item:hover {
+    transform: translateX(4px);
+  }
+  @media (max-width: 992px) {
+    .nav-item:hover {
+      transform: none;
+    }
+  }
 </style>
 </head>
 <body>
+
+<div class="mobile-header">
+  <div class="logo-title">FELLAS<span style="color:var(--accent)">CAST</span></div>
+  <div id="mobile-firebase-status" style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)"></div>
+</div>
 
 <!-- SHEETJS LIBRARY FOR EXCEL/CSV -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
@@ -758,6 +1021,49 @@ function toast(msg, type='success') {
   setTimeout(() => t.remove(), 3500);
 }
 
+function renderPagination(containerId, currentPage, totalPages, onPageClick) {
+  const pg = $(containerId);
+  if (!pg) return;
+  pg.innerHTML = '';
+  if (totalPages <= 1) return;
+
+  const range = 1;
+  const buttons = [];
+
+  buttons.push(1);
+
+  if (currentPage - range > 2) {
+    buttons.push('...');
+  }
+
+  for (let i = Math.max(2, currentPage - range); i <= Math.min(totalPages - 1, currentPage + range); i++) {
+    buttons.push(i);
+  }
+
+  if (currentPage + range < totalPages - 1) {
+    buttons.push('...');
+  }
+
+  if (totalPages > 1) {
+    buttons.push(totalPages);
+  }
+
+  buttons.forEach(p => {
+    if (p === '...') {
+      const span = el('span', '', '...');
+      span.style.color = 'var(--muted)';
+      span.style.padding = '0 6px';
+      span.style.fontFamily = 'var(--font-mono)';
+      span.style.fontSize = '12px';
+      pg.appendChild(span);
+    } else {
+      const b = el('button', `page-btn${p === currentPage ? ' active' : ''}`, p);
+      b.onclick = () => onPageClick(p);
+      pg.appendChild(b);
+    }
+  });
+}
+
 // ── Firebase Init ─────────────────────────────────────
 async function initFirebase() {
   if (!CONFIGURED) { showSetup(); return; }
@@ -777,8 +1083,15 @@ async function initFirebase() {
 
 function updateFirebaseBadge(ok) {
   const b = $('firebase-badge');
-  b.className = ok ? 'firebase-badge' : 'firebase-badge disconnected';
-  b.innerHTML = `<span class="dot"></span>${ok ? 'Firebase conectado' : 'Não configurado'}`;
+  if (b) {
+    b.className = ok ? 'firebase-badge' : 'firebase-badge disconnected';
+    b.innerHTML = `<span class="dot"></span>${ok ? 'Firebase conectado' : 'Não configurado'}`;
+  }
+  const mb = $('mobile-firebase-status');
+  if (mb) {
+    mb.style.background = ok ? 'var(--success)' : 'var(--accent)';
+    mb.style.boxShadow = ok ? '0 0 6px var(--success)' : '0 0 6px var(--accent)';
+  }
 }
 
 // ── Load Data ─────────────────────────────────────────
@@ -1102,15 +1415,9 @@ function renderEventos() {
   }
 
   // Paginação
-  const pg = $('eventos-pagination');
-  pg.innerHTML = '';
-  if (pages > 1) {
-    for (let i=1; i<=pages; i++) {
-      const b = el('button', `page-btn${i===eventoPage?' active':''}`, i);
-      b.onclick = () => { eventoPage=i; renderEventos(); };
-      pg.appendChild(b);
-    }
-  }
+  renderPagination('eventos-pagination', eventoPage, pages, p => {
+    eventoPage = p; renderEventos();
+  });
 
   $('eventos-count').textContent = `${total} evento${total!==1?'s':''}`;
 }
@@ -1154,17 +1461,10 @@ function renderLutadores() {
     tbody.appendChild(tr);
   });
 
-  const pg = $('lutadores-pagination');
-  if (pg) {
-    pg.innerHTML = '';
-    if (pages > 1) {
-      for (let i = 1; i <= pages; i++) {
-        const b = el('button', `page-btn${i===lutadorPage?' active':''}`, i);
-        b.onclick = () => { lutadorPage = i; renderLutadores(); };
-        pg.appendChild(b);
-      }
-    }
-  }
+  // Paginação
+  renderPagination('lutadores-pagination', lutadorPage, pages, p => {
+    lutadorPage = p; renderLutadores();
+  });
 }
 
 // ── CTs ───────────────────────────────────────────────
@@ -1202,17 +1502,10 @@ function renderCTs() {
     tbody.appendChild(tr);
   });
 
-  const pg = $('cts-pagination');
-  if (pg) {
-    pg.innerHTML = '';
-    if (pages > 1) {
-      for (let i = 1; i <= pages; i++) {
-        const b = el('button', `page-btn${i===ctPage?' active':''}`, i);
-        b.onclick = () => { ctPage = i; renderCTs(); };
-        pg.appendChild(b);
-      }
-    }
-  }
+  // Paginação
+  renderPagination('cts-pagination', ctPage, pages, p => {
+    ctPage = p; renderCTs();
+  });
 }
 
 // ── MODALS ────────────────────────────────────────────
@@ -1951,7 +2244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="page-title">REGISTRO DE <span>EVENTOS</span></div>
         <div style="color:var(--muted);font-size:12px;margin-top:4px" id="eventos-count"></div>
       </div>
-      <div style="display:flex;gap:10px">
+      <div class="page-header-actions">
         <button class="btn btn-ghost" onclick="exportarExcel('eventos')">📥 Exportar Planilha</button>
         <button class="btn btn-primary" onclick="openEvento()">+ Novo Evento</button>
       </div>
@@ -1978,7 +2271,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <section id="lutadores" class="section">
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>LUTADORES</span></div></div>
-      <div style="display:flex;gap:10px">
+      <div class="page-header-actions">
         <button class="btn btn-ghost" onclick="exportarExcel('lutadores')">📥 Exportar Planilha</button>
         <button class="btn btn-ghost" onclick="openUploadLutadores()">📤 Importar Planilha</button>
         <button class="btn btn-primary" onclick="openLutador()">+ Novo Lutador</button>
@@ -2005,7 +2298,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <section id="cts" class="section">
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>CTs</span></div></div>
-      <div style="display:flex;gap:10px">
+      <div class="page-header-actions">
         <button class="btn btn-ghost" onclick="exportarExcel('cts')">📥 Exportar Planilha</button>
         <button class="btn btn-ghost" onclick="openUploadCTs()">📤 Importar Planilha</button>
         <button class="btn btn-primary" onclick="openCT()">+ Novo CT</button>
