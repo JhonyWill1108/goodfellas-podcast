@@ -1231,6 +1231,12 @@ function renderPainel() {
       const l1 = getLutador(lutaPrincipal.nomeC1 || '');
       const l2 = getLutador(lutaPrincipal.nomeC2 || '');
       
+      const winsL1 = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l1.nome).length;
+      const totalWinsL1 = (l1.vitoriasBase || 0) + winsL1;
+      
+      const winsL2 = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l2.nome).length;
+      const totalWinsL2 = (l2.vitoriasBase || 0) + winsL2;
+
       // Card Lutador 1
       const cardL1 = el('div', 'highlight-card');
       cardL1.innerHTML = `
@@ -1255,6 +1261,10 @@ function renderPainel() {
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Peso / Altura</span>
             <span class="highlight-detail-value">${l1.peso ? l1.peso + 'kg' : '-'} / ${l1.altura ? l1.altura + 'cm' : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Vitórias</span>
+            <span class="highlight-detail-value" style="color:var(--gold);font-weight:600">${totalWinsL1}</span>
           </div>
         </div>
       `;
@@ -1283,6 +1293,10 @@ function renderPainel() {
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Peso / Altura</span>
             <span class="highlight-detail-value">${l2.peso ? l2.peso + 'kg' : '-'} / ${l2.altura ? l2.altura + 'cm' : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Vitórias</span>
+            <span class="highlight-detail-value" style="color:var(--gold);font-weight:600">${totalWinsL2}</span>
           </div>
         </div>
       `;
@@ -1322,6 +1336,9 @@ function renderPainel() {
       
       if (podcastEvent) {
         const l1 = getLutador(podcastEvent.nomeC1 || '');
+        const winsL1 = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l1.nome).length;
+        const totalWinsL1 = (l1.vitoriasBase || 0) + winsL1;
+
         const cardL1 = el('div', 'highlight-card');
         cardL1.innerHTML = `
           <div class="highlight-card-title">🥋 LUTADOR EM DESTAQUE: <span>${podcastEvent.nomeC1 || '-'}</span></div>
@@ -1337,6 +1354,10 @@ function renderPainel() {
             <div class="highlight-detail-row">
               <span class="highlight-detail-label">Instagram</span>
               <span class="highlight-detail-value">${l1.instagram ? '@' + l1.instagram : '-'}</span>
+            </div>
+            <div class="highlight-detail-row">
+              <span class="highlight-detail-label">Vitórias</span>
+              <span class="highlight-detail-value" style="color:var(--gold);font-weight:600">${totalWinsL1}</span>
             </div>
           </div>
         `;
@@ -1386,6 +1407,9 @@ function renderEventos() {
       const grad2 = (isPast && e.gradC2 !== undefined) ? e.gradC2 : (l2.faixa ? graduacao(l2) : '');
       const ctName = e.ct || '-';
       
+      const isWinner1 = e.tipo === 'LUTA' && e.vencedor && e.vencedor === e.nomeC1;
+      const isWinner2 = e.tipo === 'LUTA' && e.vencedor && e.vencedor === e.nomeC2;
+      
       const tr = el('tr');
       tr.innerHTML = `
         <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.numero||'-'}</td>
@@ -1393,12 +1417,16 @@ function renderEventos() {
         <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.horario||'-'}</td>
         <td>${badgeEvento(e.tipo)}</td>
         <td>
-          <div style="font-weight:500">${e.nomeC1||'-'}</div>
+          <div style="font-weight:500;display:inline-flex;align-items:center;gap:4px">
+            ${e.nomeC1||'-'} ${isWinner1 ? '<span title="Vencedor da Luta" style="color:var(--gold)">🏆</span>' : ''}
+          </div>
           ${grad1 ? `<div class="td-auto">${grad1}</div>` : ''}
           ${e.obsC1 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC1}</div>` : ''}
         </td>
         <td>
-          <div style="font-weight:500">${e.nomeC2||'-'}</div>
+          <div style="font-weight:500;display:inline-flex;align-items:center;gap:4px">
+            ${e.nomeC2||'-'} ${isWinner2 ? '<span title="Vencedor da Luta" style="color:var(--gold)">🏆</span>' : ''}
+          </div>
           ${grad2 ? `<div class="td-auto">${grad2}</div>` : ''}
           ${e.obsC2 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC2}</div>` : ''}
         </td>
@@ -1438,11 +1466,14 @@ function renderLutadores() {
   const slice = filtered.slice((lutadorPage - 1) * PER_PAGE, lutadorPage * PER_PAGE);
 
   if (!slice.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum lutador encontrado</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum lutador encontrado</div></div></td></tr>`;
     return;
   }
 
   slice.forEach(l => {
+    const wins = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l.nome).length;
+    const totalVitorias = (l.vitoriasBase || 0) + wins;
+    
     const tr = el('tr');
     tr.innerHTML = `
       <td style="font-weight:500">${l.nome||'-'}</td>
@@ -1452,6 +1483,7 @@ function renderLutadores() {
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.idade||'-'}</td>
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.peso ? l.peso+'kg' : '-'}</td>
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.altura ? l.altura+'cm' : '-'}</td>
+      <td style="font-family:var(--font-mono);font-weight:600;color:var(--gold)">${totalVitorias}</td>
       <td>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="openLutador('${l.id}')">✏️</button>
@@ -1543,7 +1575,33 @@ window.openEvento = function(id=null) {
   $('ev-link').value    = e.link   || '';
 
   updateAutoEvento();
+  updateVencedorOptions(e.vencedor || '');
   $('modal-evento').style.display = 'flex';
+}
+
+function updateVencedorOptions(selectedWinner = '') {
+  const tipo = $('ev-tipo').value;
+  const vg = $('ev-vencedor-group');
+  if (tipo === 'LUTA') {
+    vg.style.display = 'flex';
+  } else {
+    vg.style.display = 'none';
+    $('ev-vencedor').innerHTML = '<option value="">— Sem vencedor / Empate —</option>';
+    return;
+  }
+
+  const name1 = $('ev-nomeC1').value.trim();
+  const name2 = $('ev-nomeC2').value.trim();
+
+  const options = [
+    { value: '', label: '— Sem vencedor / Empate —' }
+  ];
+
+  if (name1) options.push({ value: name1, label: name1 });
+  if (name2) options.push({ value: name2, label: name2 });
+
+  const select = $('ev-vencedor');
+  select.innerHTML = options.map(o => `<option value="${o.value}"${o.value === selectedWinner ? ' selected' : ''}>${o.label}</option>`).join('');
 }
 
 function updateAutoEvento(forceDynamic = false) {
@@ -1586,6 +1644,7 @@ window.saveEvento = async function() {
     obsC2:    $('ev-obsC2').value.trim(),
     ct:       $('ev-ct').value.trim(),
     link:     $('ev-link').value.trim(),
+    vencedor: ($('ev-tipo').value === 'LUTA') ? $('ev-vencedor').value : '',
     
     // Armazena informações históricas para manter integridade no futuro
     instaC1:  $('ev-instaC1').value.trim(),
@@ -1630,6 +1689,7 @@ window.openLutador = function(id=null) {
   $('lt-idade').value    = l.idade    || '';
   $('lt-peso').value     = l.peso     || '';
   $('lt-altura').value   = l.altura   || '';
+  $('lt-vitorias-base').value = l.vitoriasBase !== undefined ? l.vitoriasBase : '';
   $('modal-lutador').style.display = 'flex';
 }
 
@@ -1643,6 +1703,7 @@ window.saveLutador = async function() {
     idade:     $('lt-idade').value,
     peso:      $('lt-peso').value,
     altura:    $('lt-altura').value,
+    vitoriasBase: parseInt($('lt-vitorias-base').value) || 0,
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
 
@@ -2058,9 +2119,16 @@ function showSetup() {
 
 // ── Event listeners ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  $('ev-nomeC1').addEventListener('input', () => updateAutoEvento(true));
-  $('ev-nomeC2').addEventListener('input', () => updateAutoEvento(true));
+  $('ev-nomeC1').addEventListener('input', () => {
+    updateAutoEvento(true);
+    updateVencedorOptions($('ev-vencedor').value);
+  });
+  $('ev-nomeC2').addEventListener('input', () => {
+    updateAutoEvento(true);
+    updateVencedorOptions($('ev-vencedor').value);
+  });
   $('ev-ct').addEventListener('input', () => updateAutoEvento(true));
+  $('ev-tipo').addEventListener('change', () => updateVencedorOptions());
 
   $('search-eventos').addEventListener('input', e => {
     eventoSearch = e.target.value; eventoPage = 1; renderEventos();
@@ -2285,7 +2353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <thead>
           <tr>
             <th>Nome</th><th>Instagram</th><th>Faixa / Grau</th><th>Equipe</th>
-            <th>Idade</th><th>Peso</th><th>Altura</th><th></th>
+            <th>Idade</th><th>Peso</th><th>Altura</th><th>Vitórias</th><th></th>
           </tr>
         </thead>
         <tbody id="lutadores-tbody"></tbody>
@@ -2346,9 +2414,13 @@ document.addEventListener('DOMContentLoaded', () => {
             <label class="form-label">Horário</label>
             <select class="form-select" id="ev-horario"></select>
           </div>
-          <div class="form-group form-full">
+          <div class="form-group">
             <label class="form-label">Tipo de Evento</label>
             <select class="form-select" id="ev-tipo"></select>
+          </div>
+          <div class="form-group" id="ev-vencedor-group" style="display:none">
+            <label class="form-label">Vencedor da Luta</label>
+            <select class="form-select" id="ev-vencedor"></select>
           </div>
         </div>
       </div>
@@ -2471,6 +2543,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-group">
           <label class="form-label">Altura (cm)</label>
           <input type="number" class="form-input" id="lt-altura" placeholder="cm">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Vitórias Iniciais</label>
+          <input type="number" class="form-input" id="lt-vitorias-base" placeholder="0" min="0">
         </div>
       </div>
     </div>
