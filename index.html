@@ -579,7 +579,7 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, o
 // ══════════════════════════════════════════════════════
 // 🔥 CONFIGURAÇÃO FIREBASE — substitua pelos seus dados
 // ══════════════════════════════════════════════════════
-const FIREBASE_CONFIG = {
+const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCDQDU4TZGFAneHSDRWL117_aFpwuhIdQE",
   authDomain: "fellascast.firebaseapp.com",
   projectId: "fellascast",
@@ -587,9 +587,19 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "214101637144",
   appId: "1:214101637144:web:e0fd3b46b158e8fa8f6b6d"
 };
+
+let FIREBASE_CONFIG = DEFAULT_FIREBASE_CONFIG;
+const storedConfig = localStorage.getItem('fellascast_firebase_config');
+if (storedConfig) {
+  try {
+    FIREBASE_CONFIG = JSON.parse(storedConfig);
+  } catch (e) {
+    console.error('Erro ao ler configuração do localStorage', e);
+  }
+}
 // ══════════════════════════════════════════════════════
 
-const CONFIGURED = !FIREBASE_CONFIG.apiKey.includes("SUA_");
+const CONFIGURED = FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.includes("SUA_");
 
 let db, app;
 let eventos = [], lutadores = [], cts = [];
@@ -602,9 +612,41 @@ let uploadTipo = null;
 // ── Estado da UI ──────────────────────────────────────
 let currentSection  = 'painel';
 let eventoPage      = 1; const PER_PAGE = 15;
+let lutadorPage     = 1;
+let ctPage          = 1;
 let eventoSearch    = '';
 let lutadorSearch   = '';
 let ctSearch        = '';
+
+// ── Date helper functions ─────────────────────────────
+function dbToInputDate(dbDate) {
+  if (!dbDate) return '';
+  const parts = dbDate.split('/');
+  if (parts.length !== 3) return '';
+  let [d, m, y] = parts;
+  if (y.length === 2) y = '20' + y;
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
+function inputToDbDate(inputDate) {
+  if (!inputDate) return '';
+  const parts = inputDate.split('-');
+  if (parts.length !== 3) return '';
+  const [y, m, d] = parts;
+  return `${d}/${m}/${y}`;
+}
+
+// ── Datalist helper function ──────────────────────────
+function updateDatalists() {
+  const lutadoresList = $('lutadores-list');
+  if (lutadoresList) {
+    lutadoresList.innerHTML = lutadores.map(l => `<option value="${l.nome}"></option>`).join('');
+  }
+  const ctsList = $('cts-list');
+  if (ctsList) {
+    ctsList.innerHTML = cts.map(c => `<option value="${c.nome}"></option>`).join('');
+  }
+}
 
 // ── DOM helpers ───────────────────────────────────────
 const $  = id => document.getElementById(id);
@@ -663,6 +705,7 @@ function renderAll() {
   renderEventos();
   renderLutadores();
   renderCTs();
+  updateDatalists();
 }
 
 // ── Helpers ───────────────────────────────────────────
@@ -809,12 +852,17 @@ function renderLutadores() {
     return !q || (l.nome||'').toLowerCase().includes(q) || (l.equipe||'').toLowerCase().includes(q) || (l.faixa||'').toLowerCase().includes(q);
   });
 
-  if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum lutador encontrado</div></div></td></tr>`;
+  const total = filtered.length;
+  const pages = Math.ceil(total / PER_PAGE) || 1;
+  lutadorPage = Math.min(lutadorPage, pages);
+  const slice = filtered.slice((lutadorPage - 1) * PER_PAGE, lutadorPage * PER_PAGE);
+
+  if (!slice.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty"><div class="empty-icon">👤</div><div class="empty-text">Nenhum lutador encontrado</div></div></td></tr>`;
     return;
   }
 
-  filtered.forEach(l => {
+  slice.forEach(l => {
     const tr = el('tr');
     tr.innerHTML = `
       <td style="font-weight:500">${l.nome||'-'}</td>
@@ -832,6 +880,18 @@ function renderLutadores() {
       </td>`;
     tbody.appendChild(tr);
   });
+
+  const pg = $('lutadores-pagination');
+  if (pg) {
+    pg.innerHTML = '';
+    if (pages > 1) {
+      for (let i = 1; i <= pages; i++) {
+        const b = el('button', `page-btn${i===lutadorPage?' active':''}`, i);
+        b.onclick = () => { lutadorPage = i; renderLutadores(); };
+        pg.appendChild(b);
+      }
+    }
+  }
 }
 
 // ── CTs ───────────────────────────────────────────────
@@ -844,12 +904,17 @@ function renderCTs() {
     return !q || (c.nome||'').toLowerCase().includes(q) || (c.dono||'').toLowerCase().includes(q);
   });
 
-  if (!filtered.length) {
+  const total = filtered.length;
+  const pages = Math.ceil(total / PER_PAGE) || 1;
+  ctPage = Math.min(ctPage, pages);
+  const slice = filtered.slice((ctPage - 1) * PER_PAGE, ctPage * PER_PAGE);
+
+  if (!slice.length) {
     tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">🏟</div><div class="empty-text">Nenhum CT encontrado</div></div></td></tr>`;
     return;
   }
 
-  filtered.forEach(c => {
+  slice.forEach(c => {
     const tr = el('tr');
     tr.innerHTML = `
       <td style="font-weight:500">${c.nome||'-'}</td>
@@ -863,6 +928,18 @@ function renderCTs() {
       </td>`;
     tbody.appendChild(tr);
   });
+
+  const pg = $('cts-pagination');
+  if (pg) {
+    pg.innerHTML = '';
+    if (pages > 1) {
+      for (let i = 1; i <= pages; i++) {
+        const b = el('button', `page-btn${i===ctPage?' active':''}`, i);
+        b.onclick = () => { ctPage = i; renderCTs(); };
+        pg.appendChild(b);
+      }
+    }
+  }
 }
 
 // ── MODALS ────────────────────────────────────────────
@@ -887,14 +964,16 @@ window.openEvento = function(id=null) {
 
   // Preenche form
   $('ev-numero').value  = e.numero || maxN;
-  $('ev-data').value    = e.data   || '';
+  $('ev-data').value    = dbToInputDate(e.data || '');
   $('ev-horario').innerHTML = selectOptions(HORARIOS, e.horario||'19:00');
   $('ev-tipo').innerHTML    = selectOptions(TIPOS, e.tipo||'PODCAST');
-  $('ev-nomeC1').innerHTML  = selectOptions(lutadores.map(l=>l.nome), e.nomeC1||'', '— Selecione —');
-  $('ev-nomeC2').innerHTML  = selectOptions(lutadores.map(l=>l.nome), e.nomeC2||'', '— Nenhum —');
+  
+  // Usando datalist, colocamos o valor do input diretamente
+  $('ev-nomeC1').value  = e.nomeC1 || '';
+  $('ev-nomeC2').value  = e.nomeC2 || '';
   $('ev-obsC1').value   = e.obsC1  || '';
   $('ev-obsC2').value   = e.obsC2  || '';
-  $('ev-ct').innerHTML  = selectOptions(cts.map(c=>c.nome), e.ct||'', '— Selecione —');
+  $('ev-ct').value      = e.ct || '';
   $('ev-link').value    = e.link   || '';
 
   updateAutoEvento();
@@ -918,15 +997,15 @@ function updateAutoEvento() {
 window.saveEvento = async function() {
   const data = {
     numero:   parseInt($('ev-numero').value) || 0,
-    data:     $('ev-data').value,
+    data:     inputToDbDate($('ev-data').value),
     horario:  $('ev-horario').value,
     tipo:     $('ev-tipo').value,
-    nomeC1:   $('ev-nomeC1').value,
-    nomeC2:   $('ev-nomeC2').value,
-    obsC1:    $('ev-obsC1').value,
-    obsC2:    $('ev-obsC2').value,
-    ct:       $('ev-ct').value,
-    link:     $('ev-link').value,
+    nomeC1:   $('ev-nomeC1').value.trim(),
+    nomeC2:   $('ev-nomeC2').value.trim(),
+    obsC1:    $('ev-obsC1').value.trim(),
+    obsC2:    $('ev-obsC2').value.trim(),
+    ct:       $('ev-ct').value.trim(),
+    link:     $('ev-link').value.trim(),
   };
   try {
     if (eventoEditId) {
@@ -977,6 +1056,15 @@ window.saveLutador = async function() {
     altura:    $('lt-altura').value,
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
+
+  // Verificação de lutador duplicado
+  const duplicado = lutadores.find(l => l.nome.toLowerCase() === data.nome.toLowerCase() && l.id !== lutadorEditId);
+  if (duplicado) {
+    if (!confirm(`Já existe um lutador cadastrado com o nome "${data.nome}". Deseja continuar mesmo assim?`)) {
+      return;
+    }
+  }
+
   try {
     if (lutadorEditId) {
       await updateDoc(doc(db,'lutadores',lutadorEditId), data);
@@ -1249,33 +1337,40 @@ window.importarPlanilha = async function() {
   $('upload-btn-import').textContent = '⏳ Importando...';
 
   try {
-    const batch = writeBatch(db);
     const colName = tipo === 'lutadores' ? 'lutadores' : 'cts';
+    const CHUNK_SIZE = 500;
+    
+    for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+      const chunk = rows.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+      
+      chunk.forEach(row => {
+        if (tipo === 'lutadores') {
+          const data = {
+            nome: (row.Nome || '').trim(),
+            instagram: (row.Instagram || '').trim(),
+            faixa: (row.Faixa || '').trim(),
+            grau: (row.Grau || '').trim(),
+            equipe: (row.Equipe || '').trim(),
+            idade: row.Idade ? String(row.Idade).trim() : '',
+            peso: row.Peso ? String(row.Peso).trim() : '',
+            altura: row.Altura ? String(row.Altura).trim() : '',
+          };
+          batch.set(doc(collection(db, colName)), data);
+        } else {
+          const data = {
+            nome: (row['Nome do CT'] || '').trim(),
+            dono: (row.Responsável || '').trim(),
+            endereco: (row.Endereço || '').trim(),
+          };
+          batch.set(doc(collection(db, colName)), data);
+        }
+      });
+      
+      await batch.commit();
+      console.log(`Lote importado: ${i + chunk.length} de ${rows.length}`);
+    }
 
-    rows.forEach(row => {
-      if (tipo === 'lutadores') {
-        const data = {
-          nome: (row.Nome || '').trim(),
-          instagram: (row.Instagram || '').trim(),
-          faixa: (row.Faixa || '').trim(),
-          grau: (row.Grau || '').trim(),
-          equipe: (row.Equipe || '').trim(),
-          idade: row.Idade ? String(row.Idade).trim() : '',
-          peso: row.Peso ? String(row.Peso).trim() : '',
-          altura: row.Altura ? String(row.Altura).trim() : '',
-        };
-        batch.set(collection(db, colName).doc(), data);
-      } else {
-        const data = {
-          nome: (row['Nome do CT'] || '').trim(),
-          dono: (row.Responsável || '').trim(),
-          endereco: (row.Endereço || '').trim(),
-        };
-        batch.set(collection(db, colName).doc(), data);
-      }
-    });
-
-    await batch.commit();
     const plural = tipo === 'lutadores' ? 'lutadores' : 'CTs';
     toast(`✓ ${rows.length} ${plural} importados com sucesso!`);
     
@@ -1295,6 +1390,101 @@ window.importarPlanilha = async function() {
     toast(`Erro ao importar: ${e.message}`, 'error');
     $('upload-btn-import').disabled = false;
     $('upload-btn-import').textContent = '📤 Importar';
+  }
+}
+
+// ── Exportar Planilha Excel ───────────────────────────
+window.exportarExcel = function(tipo) {
+  let dataToExport = [];
+  let filename = '';
+  
+  if (tipo === 'eventos') {
+    dataToExport = eventos.map(e => ({
+      'Número': e.numero || '',
+      'Data': e.data || '',
+      'Horário': e.horario || '',
+      'Tipo': e.tipo || '',
+      'Convidado 1': e.nomeC1 || '',
+      'Obs Convidado 1': e.obsC1 || '',
+      'Convidado 2': e.nomeC2 || '',
+      'Obs Convidado 2': e.obsC2 || '',
+      'CT': e.ct || '',
+      'Link da Live': e.link || ''
+    }));
+    filename = 'eventos.xlsx';
+  } else if (tipo === 'lutadores') {
+    dataToExport = lutadores.map(l => ({
+      'Nome': l.nome || '',
+      'Instagram': l.instagram || '',
+      'Faixa': l.faixa || '',
+      'Grau': l.grau || '',
+      'Equipe': l.equipe || '',
+      'Idade': l.idade || '',
+      'Peso': l.peso || '',
+      'Altura': l.altura || ''
+    }));
+    filename = 'lutadores.xlsx';
+  } else if (tipo === 'cts') {
+    dataToExport = cts.map(c => ({
+      'Nome do CT': c.nome || '',
+      'Responsável': c.dono || '',
+      'Endereço': c.endereco || ''
+    }));
+    filename = 'cts.xlsx';
+  }
+  
+  try {
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
+    XLSX.writeFile(workbook, filename);
+    toast('Planilha exportada com sucesso!');
+  } catch (err) {
+    toast(`Erro ao exportar: ${err.message}`, 'error');
+  }
+}
+
+// ── Configurações de Firebase local ───────────────────
+window.openConfiguracoes = function() {
+  const currentCfg = localStorage.getItem('fellascast_firebase_config') || JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
+  $('cfg-json').value = currentCfg;
+  $('modal-configuracoes').style.display = 'flex';
+}
+
+window.salvarConfiguracao = function() {
+  const val = $('cfg-json').value.trim();
+  try {
+    const parsed = JSON.parse(val);
+    if (!parsed.apiKey || !parsed.projectId) {
+      throw new Error('A configuração deve conter pelo menos apiKey e projectId.');
+    }
+    localStorage.setItem('fellascast_firebase_config', JSON.stringify(parsed, null, 2));
+    toast('Configurações salvas! Recarregando página...');
+    setTimeout(() => window.location.reload(), 1500);
+  } catch (err) {
+    try {
+      const cleanVal = val
+        .replace(/([{,]\s*)([a-zA-Z0-9]+)\s*:/g, '$1"$2":')
+        .replace(/'/g, '"')
+        .replace(/,\s*([\]}])/g, '$1');
+      const parsed = JSON.parse(cleanVal);
+      if (!parsed.apiKey || !parsed.projectId) {
+        throw new Error('Chaves apiKey e projectId não encontradas.');
+      }
+      localStorage.setItem('fellascast_firebase_config', JSON.stringify(parsed, null, 2));
+      toast('Configurações salvas! Recarregando página...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e2) {
+      toast('Configuração inválida. Verifique o formato JSON.', 'error');
+    }
+  }
+}
+
+window.restaurarConfiguracaoPadrao = function() {
+  if (confirm('Deseja restaurar a configuração original do Firebase?')) {
+    localStorage.removeItem('fellascast_firebase_config');
+    toast('Configurações originais restauradas! Recarregando...');
+    setTimeout(() => window.location.reload(), 1500);
   }
 }
 
@@ -1321,18 +1511,18 @@ function showSetup() {
 
 // ── Event listeners ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  $('ev-nomeC1').addEventListener('change', updateAutoEvento);
-  $('ev-nomeC2').addEventListener('change', updateAutoEvento);
-  $('ev-ct').addEventListener('change', updateAutoEvento);
+  $('ev-nomeC1').addEventListener('input', updateAutoEvento);
+  $('ev-nomeC2').addEventListener('input', updateAutoEvento);
+  $('ev-ct').addEventListener('input', updateAutoEvento);
 
   $('search-eventos').addEventListener('input', e => {
     eventoSearch = e.target.value; eventoPage = 1; renderEventos();
   });
   $('search-lutadores').addEventListener('input', e => {
-    lutadorSearch = e.target.value; renderLutadores();
+    lutadorSearch = e.target.value; lutadorPage = 1; renderLutadores();
   });
   $('search-cts').addEventListener('input', e => {
-    ctSearch = e.target.value; renderCTs();
+    ctSearch = e.target.value; ctPage = 1; renderCTs();
   });
 
   // Drag and drop para upload
@@ -1423,6 +1613,10 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="nav-item" data-section="cts" onclick="showSection('cts')">
       <span class="icon">🏟</span><span>CTs</span>
     </div>
+    <div class="nav-section">Configuração</div>
+    <div class="nav-item" onclick="openConfiguracoes()">
+      <span class="icon">⚙️</span><span>Configurar Firebase</span>
+    </div>
   </nav>
   <div id="firebase-badge" class="firebase-badge disconnected">
     <span class="dot"></span>Não configurado
@@ -1501,7 +1695,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="page-title">REGISTRO DE <span>EVENTOS</span></div>
         <div style="color:var(--muted);font-size:12px;margin-top:4px" id="eventos-count"></div>
       </div>
-      <button class="btn btn-primary" onclick="openEvento()">+ Novo Evento</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="exportarExcel('eventos')">📥 Exportar Planilha</button>
+        <button class="btn btn-primary" onclick="openEvento()">+ Novo Evento</button>
+      </div>
     </div>
     <div class="toolbar">
       <input type="text" class="search-box" id="search-eventos" placeholder="Buscar por data, tipo, lutador...">
@@ -1526,6 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>LUTADORES</span></div></div>
       <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="exportarExcel('lutadores')">📥 Exportar Planilha</button>
         <button class="btn btn-ghost" onclick="openUploadLutadores()">📤 Importar Planilha</button>
         <button class="btn btn-primary" onclick="openLutador()">+ Novo Lutador</button>
       </div>
@@ -1544,6 +1742,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <tbody id="lutadores-tbody"></tbody>
       </table>
     </div>
+    <div class="pagination" id="lutadores-pagination"></div>
   </section>
 
   <!-- ── CTs ── -->
@@ -1551,6 +1750,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="page-header">
       <div><div class="page-title">CADASTRO DE <span>CTs</span></div></div>
       <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="exportarExcel('cts')">📥 Exportar Planilha</button>
         <button class="btn btn-ghost" onclick="openUploadCTs()">📤 Importar Planilha</button>
         <button class="btn btn-primary" onclick="openCT()">+ Novo CT</button>
       </div>
@@ -1566,6 +1766,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <tbody id="cts-tbody"></tbody>
       </table>
     </div>
+    <div class="pagination" id="cts-pagination"></div>
   </section>
 
 </main>
@@ -1590,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="form-group">
             <label class="form-label">Data</label>
-            <input type="text" class="form-input" id="ev-data" placeholder="DD/MM/AA">
+            <input type="date" class="form-input" id="ev-data">
           </div>
           <div class="form-group">
             <label class="form-label">Horário</label>
@@ -1608,7 +1809,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nome</label>
-            <select class="form-select" id="ev-nomeC1"></select>
+            <input type="text" class="form-input" id="ev-nomeC1" list="lutadores-list" placeholder="Digite ou selecione...">
           </div>
           <div class="form-group">
             <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
@@ -1634,7 +1835,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nome</label>
-            <select class="form-select" id="ev-nomeC2"></select>
+            <input type="text" class="form-input" id="ev-nomeC2" list="lutadores-list" placeholder="Digite ou selecione...">
           </div>
           <div class="form-group">
             <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
@@ -1660,7 +1861,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">CT (Local)</label>
-            <select class="form-select" id="ev-ct"></select>
+            <input type="text" class="form-input" id="ev-ct" list="cts-list" placeholder="Digite ou selecione...">
           </div>
           <div class="form-group">
             <label class="form-label">Endereço <span class="auto-tag">✦ auto</span></label>
@@ -1810,6 +2011,36 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
   </div>
 </div>
+
+<!-- CONFIGURAÇÕES -->
+<div id="modal-configuracoes" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <div class="modal-title">CONFIGURAR <span>FIREBASE</span></div>
+      <button class="modal-close" onclick="closeModal('modal-configuracoes')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid" style="grid-template-columns:1fr">
+        <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">
+          Cole abaixo as configurações do seu projeto Firebase (formato JSON ou objeto javascript).
+        </p>
+        <div class="form-group">
+          <label class="form-label">Configuração Firebase (JSON)</label>
+          <textarea class="form-input" id="cfg-json" style="height:180px;font-family:var(--font-mono);font-size:11px;resize:vertical" placeholder='{&#10;  "apiKey": "...",&#10;  "authDomain": "...",&#10;  "projectId": "...",&#10;  "storageBucket": "...",&#10;  "messagingSenderId": "...",&#10;  "appId": "..."&#10;}'></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="restaurarConfiguracaoPadrao()">Restaurar Padrão</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-configuracoes')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarConfiguracao()">💾 Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- DATALISTS PARA AUTOCOMPLETE -->
+<datalist id="lutadores-list"></datalist>
+<datalist id="cts-list"></datalist>
 
 <!-- TOASTS -->
 <div class="toast-container" id="toasts"></div>
