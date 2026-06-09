@@ -563,6 +563,96 @@
   .section.active { display: block; }
 
   .tag { display: inline-block; }
+
+  /* ── WEEKLY HIGHLIGHTS ── */
+  .weekly-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+    margin-top: 24px;
+  }
+  .highlight-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all .2s;
+  }
+  .highlight-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .highlight-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .highlight-card.match-card::before {
+    background: linear-gradient(90deg, var(--gold), var(--accent));
+  }
+  .highlight-card-title {
+    font-family: var(--font-head);
+    font-size: 20px;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .highlight-card-title span {
+    color: var(--accent);
+  }
+  .highlight-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .highlight-detail-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 6px;
+  }
+  .highlight-detail-label {
+    color: var(--muted);
+  }
+  .highlight-detail-value {
+    font-weight: 500;
+    color: var(--text);
+  }
+  .highlight-detail-value.vs {
+    font-family: var(--font-head);
+    color: var(--gold);
+    font-size: 18px;
+  }
+  .highlight-address-alert {
+    background: rgba(244,162,97,0.1);
+    border: 1px dashed var(--gold);
+    color: var(--gold);
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    margin-top: 10px;
+    text-align: center;
+  }
+  
+  .past-event-row {
+    opacity: 0.55;
+  }
+  .past-event-badge {
+    background: rgba(45,155,107,0.15);
+    color: var(--success);
+    border: 1px solid rgba(45,155,107,0.3);
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    font-family: var(--font-mono);
+  }
 </style>
 </head>
 <body>
@@ -744,6 +834,36 @@ function badgeEvento(tipo) {
 }
 
 // ── PAINEL ────────────────────────────────────────────
+// ── Week helper functions ─────────────────────────────
+function getWeekBounds() {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
+  
+  // Start of the week (Sunday)
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - dayOfWeek);
+  startOfWeek.setHours(0, 0, 0, 0);
+  
+  // End of the week (Saturday)
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
+  endOfWeek.setHours(23, 59, 59, 999);
+  
+  return { startOfWeek, endOfWeek };
+}
+
+function isEventInCurrentWeek(dateStr) {
+  if (!dateStr) return false;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return false;
+  let [d, m, y] = parts;
+  if (y.length === 2) y = '20' + y;
+  const evDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T12:00:00`);
+  const { startOfWeek, endOfWeek } = getWeekBounds();
+  return evDate >= startOfWeek && evDate <= endOfWeek;
+}
+
+// ── PAINEL ────────────────────────────────────────────
 function renderPainel() {
   const total    = eventos.length;
   const podcasts = eventos.filter(e=>e.tipo==='PODCAST').length;
@@ -759,32 +879,169 @@ function renderPainel() {
   $('c-cts').textContent      = cts.length;
   $('c-links').textContent    = comLink;
 
-  // Próximos eventos
-  const tbody = $('proximos-tbody');
-  tbody.innerHTML = '';
-  const hoje = new Date();
-  const proximos = eventos
-    .filter(e => {
-      if (!e.data) return false;
-      const [d,m,y] = e.data.split('/');
-      return new Date(`20${y}-${m}-${d}`) >= hoje;
-    })
-    .slice(0,5);
+  // Filtrar eventos da semana atual (Domingo a Sábado)
+  const semanaEventos = eventos.filter(e => isEventInCurrentWeek(e.data));
 
-  if (!proximos.length) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Nenhum evento futuro</td></tr>`;
-    return;
+  // Renderizar tabela de eventos da semana
+  const tbody = $('semana-tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (!semanaEventos.length) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Nenhum evento agendado para esta semana</td></tr>`;
+    } else {
+      semanaEventos.forEach(e => {
+        const isPast = isPastEvent(e.data);
+        const tr = el('tr');
+        if (isPast) {
+          tr.className = 'past-event-row';
+        }
+        tr.innerHTML = `
+          <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.data||'-'}</td>
+          <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.horario||'-'}</td>
+          <td>${badgeEvento(e.tipo)}</td>
+          <td>${e.nomeC1||'-'}</td>
+          <td>${e.nomeC2||'-'}</td>
+          <td>${isPast ? '<span class="past-event-badge">Realizado</span>' : '<span style="color:var(--gold);font-family:var(--font-mono);font-size:10px;text-transform:uppercase">Agendado</span>'}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
   }
-  proximos.forEach(e => {
-    const tr = el('tr');
-    tr.innerHTML = `
-      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.data||'-'}</td>
-      <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.horario||'-'}</td>
-      <td>${badgeEvento(e.tipo)}</td>
-      <td>${e.nomeC1||'-'}</td>
-      <td>${e.nomeC2||'-'}</td>`;
-    tbody.appendChild(tr);
-  });
+
+  // Encontrar a Luta Principal da semana (evento LUTA na semana atual)
+  const lutaPrincipal = semanaEventos.find(e => e.tipo === 'LUTA');
+  const highlightsContainer = $('weekly-highlights-container');
+  
+  if (highlightsContainer) {
+    highlightsContainer.innerHTML = '';
+    
+    if (lutaPrincipal) {
+      const l1 = getLutador(lutaPrincipal.nomeC1 || '');
+      const l2 = getLutador(lutaPrincipal.nomeC2 || '');
+      
+      // Card Lutador 1
+      const cardL1 = el('div', 'highlight-card');
+      cardL1.innerHTML = `
+        <div class="highlight-card-title">🥋 LUTADOR 1: <span>${lutaPrincipal.nomeC1 || '-'}</span></div>
+        <div class="highlight-detail">
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Faixa / Grau</span>
+            <span class="highlight-detail-value">${l1.faixa ? `${l1.faixa} ${l1.grau || ''}` : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Equipe</span>
+            <span class="highlight-detail-value">${l1.equipe || '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Instagram</span>
+            <span class="highlight-detail-value">${l1.instagram ? '@' + l1.instagram : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Idade</span>
+            <span class="highlight-detail-value">${l1.idade ? l1.idade + ' anos' : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Peso / Altura</span>
+            <span class="highlight-detail-value">${l1.peso ? l1.peso + 'kg' : '-'} / ${l1.altura ? l1.altura + 'cm' : '-'}</span>
+          </div>
+        </div>
+      `;
+      
+      // Card Lutador 2
+      const cardL2 = el('div', 'highlight-card');
+      cardL2.innerHTML = `
+        <div class="highlight-card-title">🥋 LUTADOR 2: <span>${lutaPrincipal.nomeC2 || '-'}</span></div>
+        <div class="highlight-detail">
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Faixa / Grau</span>
+            <span class="highlight-detail-value">${l2.faixa ? `${l2.faixa} ${l2.grau || ''}` : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Equipe</span>
+            <span class="highlight-detail-value">${l2.equipe || '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Instagram</span>
+            <span class="highlight-detail-value">${l2.instagram ? '@' + l2.instagram : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Idade</span>
+            <span class="highlight-detail-value">${l2.idade ? l2.idade + ' anos' : '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Peso / Altura</span>
+            <span class="highlight-detail-value">${l2.peso ? l2.peso + 'kg' : '-'} / ${l2.altura ? l2.altura + 'cm' : '-'}</span>
+          </div>
+        </div>
+      `;
+      
+      // Card da Luta e Endereço
+      const cardLuta = el('div', 'highlight-card match-card');
+      const addressText = lutaPrincipal.endereco ? lutaPrincipal.endereco : '';
+      
+      cardLuta.innerHTML = `
+        <div class="highlight-card-title">⚔️ A LUTA DA <span>SEMANA</span></div>
+        <div class="highlight-detail">
+          <div class="highlight-detail-row" style="border:none;margin-bottom:10px;text-align:center;justify-content:center">
+            <span class="highlight-detail-value vs">${lutaPrincipal.nomeC1 || '-'} <span style="color:var(--accent)">VS</span> ${lutaPrincipal.nomeC2 || '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">Data / Horário</span>
+            <span class="highlight-detail-value">${lutaPrincipal.data || '-'} às ${lutaPrincipal.horario || '-'}</span>
+          </div>
+          <div class="highlight-detail-row">
+            <span class="highlight-detail-label">CT</span>
+            <span class="highlight-detail-value">${lutaPrincipal.ct || '-'}</span>
+          </div>
+          <div class="highlight-detail-row" style="flex-direction:column;align-items:flex-start;gap:4px">
+            <span class="highlight-detail-label">Endereço da Luta</span>
+            <span class="highlight-detail-value" style="word-break:break-word">${addressText || '-'}</span>
+          </div>
+          ${!addressText ? '<div class="highlight-address-alert">⚠️ Endereço a definir (live de terça)</div>' : ''}
+        </div>
+      `;
+      
+      highlightsContainer.appendChild(cardL1);
+      highlightsContainer.appendChild(cardL2);
+      highlightsContainer.appendChild(cardLuta);
+      
+    } else {
+      const podcastEvent = semanaEventos.find(e => e.tipo === 'PODCAST');
+      
+      if (podcastEvent) {
+        const l1 = getLutador(podcastEvent.nomeC1 || '');
+        const cardL1 = el('div', 'highlight-card');
+        cardL1.innerHTML = `
+          <div class="highlight-card-title">🥋 LUTADOR EM DESTAQUE: <span>${podcastEvent.nomeC1 || '-'}</span></div>
+          <div class="highlight-detail">
+            <div class="highlight-detail-row">
+              <span class="highlight-detail-label">Faixa / Grau</span>
+              <span class="highlight-detail-value">${l1.faixa ? `${l1.faixa} ${l1.grau || ''}` : '-'}</span>
+            </div>
+            <div class="highlight-detail-row">
+              <span class="highlight-detail-label">Equipe</span>
+              <span class="highlight-detail-value">${l1.equipe || '-'}</span>
+            </div>
+            <div class="highlight-detail-row">
+              <span class="highlight-detail-label">Instagram</span>
+              <span class="highlight-detail-value">${l1.instagram ? '@' + l1.instagram : '-'}</span>
+            </div>
+          </div>
+        `;
+        highlightsContainer.appendChild(cardL1);
+        
+        const cardEmpty = el('div', 'highlight-card');
+        cardEmpty.style.opacity = '0.5';
+        cardEmpty.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px 0">Nenhuma luta principal agendada</div>`;
+        highlightsContainer.appendChild(cardEmpty);
+      } else {
+        highlightsContainer.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;color:var(--muted);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:40px">
+            🥋 Nenhuma luta principal agendada para esta semana.
+          </div>
+        `;
+      }
+    }
+  }
 }
 
 // ── EVENTOS ───────────────────────────────────────────
@@ -1710,18 +1967,24 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
 
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)">
+    <!-- ── DESTAQUES DA SEMANA ── -->
+    <div class="weekly-highlights" id="weekly-highlights-container">
+      <!-- Preenchido dinamicamente -->
+    </div>
+
+    <!-- ── EVENTOS DA SEMANA ── -->
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-top:20px">
       <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--font-head);font-size:18px;letter-spacing:1px">
-        PRÓXIMOS <span style="color:var(--accent)">EVENTOS</span>
+        EVENTOS DA <span style="color:var(--accent)">SEMANA ATUAL</span>
       </div>
       <div class="table-wrap" style="border:none">
         <table>
           <thead>
             <tr>
-              <th>Data</th><th>Hora</th><th>Tipo</th><th>Convidado 1</th><th>Convidado 2</th>
+              <th>Data</th><th>Hora</th><th>Tipo</th><th>Convidado 1</th><th>Convidado 2</th><th>Status</th>
             </tr>
           </thead>
-          <tbody id="proximos-tbody"></tbody>
+          <tbody id="semana-tbody"></tbody>
         </table>
       </div>
     </div>
