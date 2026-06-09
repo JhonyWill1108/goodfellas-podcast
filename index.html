@@ -1740,49 +1740,7 @@ window.exportarExcel = function(tipo) {
   }
 }
 
-// ── Configurações de Firebase local ───────────────────
-window.openConfiguracoes = function() {
-  const currentCfg = localStorage.getItem('fellascast_firebase_config') || JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
-  $('cfg-json').value = currentCfg;
-  $('modal-configuracoes').style.display = 'flex';
-}
 
-window.salvarConfiguracao = function() {
-  const val = $('cfg-json').value.trim();
-  try {
-    const parsed = JSON.parse(val);
-    if (!parsed.apiKey || !parsed.projectId) {
-      throw new Error('A configuração deve conter pelo menos apiKey e projectId.');
-    }
-    localStorage.setItem('fellascast_firebase_config', JSON.stringify(parsed, null, 2));
-    toast('Configurações salvas! Recarregando página...');
-    setTimeout(() => window.location.reload(), 1500);
-  } catch (err) {
-    try {
-      const cleanVal = val
-        .replace(/([{,]\s*)([a-zA-Z0-9]+)\s*:/g, '$1"$2":')
-        .replace(/'/g, '"')
-        .replace(/,\s*([\]}])/g, '$1');
-      const parsed = JSON.parse(cleanVal);
-      if (!parsed.apiKey || !parsed.projectId) {
-        throw new Error('Chaves apiKey e projectId não encontradas.');
-      }
-      localStorage.setItem('fellascast_firebase_config', JSON.stringify(parsed, null, 2));
-      toast('Configurações salvas! Recarregando página...');
-      setTimeout(() => window.location.reload(), 1500);
-    } catch (e2) {
-      toast('Configuração inválida. Verifique o formato JSON.', 'error');
-    }
-  }
-}
-
-window.restaurarConfiguracaoPadrao = function() {
-  if (confirm('Deseja restaurar a configuração original do Firebase?')) {
-    localStorage.removeItem('fellascast_firebase_config');
-    toast('Configurações originais restauradas! Recarregando...');
-    setTimeout(() => window.location.reload(), 1500);
-  }
-}
 
 // ── Modal helpers ─────────────────────────────────────
 window.closeModal = function(id) {
@@ -1908,10 +1866,6 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="nav-item" data-section="cts" onclick="showSection('cts')">
       <span class="icon">🏟</span><span>CTs</span>
-    </div>
-    <div class="nav-section">Configuração</div>
-    <div class="nav-item" onclick="openConfiguracoes()">
-      <span class="icon">⚙️</span><span>Configurar Firebase</span>
     </div>
   </nav>
   <div id="firebase-badge" class="firebase-badge disconnected">
@@ -2314,31 +2268,7 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
-<!-- CONFIGURAÇÕES -->
-<div id="modal-configuracoes" class="modal-overlay" style="display:none">
-  <div class="modal" style="max-width:500px">
-    <div class="modal-header">
-      <div class="modal-title">CONFIGURAR <span>FIREBASE</span></div>
-      <button class="modal-close" onclick="closeModal('modal-configuracoes')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid" style="grid-template-columns:1fr">
-        <p style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:10px">
-          Cole abaixo as configurações do seu projeto Firebase (formato JSON ou objeto javascript).
-        </p>
-        <div class="form-group">
-          <label class="form-label">Configuração Firebase (JSON)</label>
-          <textarea class="form-input" id="cfg-json" style="height:180px;font-family:var(--font-mono);font-size:11px;resize:vertical" placeholder='{&#10;  "apiKey": "...",&#10;  "authDomain": "...",&#10;  "projectId": "...",&#10;  "storageBucket": "...",&#10;  "messagingSenderId": "...",&#10;  "appId": "..."&#10;}'></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-danger" onclick="restaurarConfiguracaoPadrao()">Restaurar Padrão</button>
-      <button class="btn btn-ghost" onclick="closeModal('modal-configuracoes')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarConfiguracao()">💾 Salvar</button>
-    </div>
-  </div>
-</div>
+
 
 <!-- DATALISTS PARA AUTOCOMPLETE -->
 <datalist id="lutadores-list"></datalist>
