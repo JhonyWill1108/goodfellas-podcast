@@ -636,6 +636,16 @@ function inputToDbDate(inputDate) {
   return `${d}/${m}/${y}`;
 }
 
+function isPastEvent(dateStr) {
+  if (!dateStr) return false;
+  const parts = dateStr.split('/');
+  if (parts.length !== 3) return false;
+  let [d, m, y] = parts;
+  if (y.length === 2) y = '20' + y;
+  const evDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T23:59:59`);
+  return evDate < new Date();
+}
+
 // ── Datalist helper function ──────────────────────────
 function updateDatalists() {
   const lutadoresList = $('lutadores-list');
@@ -798,8 +808,14 @@ function renderEventos() {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🥋</div><div class="empty-text">Nenhum evento encontrado</div></div></td></tr>`;
   } else {
     slice.forEach(e => {
+      const isPast = isPastEvent(e.data);
       const l1 = getLutador(e.nomeC1||'');
       const l2 = getLutador(e.nomeC2||'');
+      
+      const grad1 = (isPast && e.gradC1 !== undefined) ? e.gradC1 : (l1.faixa ? graduacao(l1) : '');
+      const grad2 = (isPast && e.gradC2 !== undefined) ? e.gradC2 : (l2.faixa ? graduacao(l2) : '');
+      const ctName = e.ct || '-';
+      
       const tr = el('tr');
       tr.innerHTML = `
         <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${e.numero||'-'}</td>
@@ -808,15 +824,15 @@ function renderEventos() {
         <td>${badgeEvento(e.tipo)}</td>
         <td>
           <div style="font-weight:500">${e.nomeC1||'-'}</div>
-          ${l1.faixa ? `<div class="td-auto">${graduacao(l1)}</div>` : ''}
+          ${grad1 ? `<div class="td-auto">${grad1}</div>` : ''}
           ${e.obsC1 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC1}</div>` : ''}
         </td>
         <td>
           <div style="font-weight:500">${e.nomeC2||'-'}</div>
-          ${l2.faixa ? `<div class="td-auto">${graduacao(l2)}</div>` : ''}
+          ${grad2 ? `<div class="td-auto">${grad2}</div>` : ''}
           ${e.obsC2 ? `<div style="font-size:11px;color:var(--gold)">${e.obsC2}</div>` : ''}
         </td>
-        <td style="color:var(--muted);font-size:12px">${e.ct||'-'}</td>
+        <td style="color:var(--muted);font-size:12px">${ctName}</td>
         <td>${e.link ? `<a href="${e.link}" target="_blank" style="color:var(--accent);font-size:11px;font-family:var(--font-mono)">▶ Link</a>` : '-'}</td>
         <td>
           <div style="display:flex;gap:6px">
@@ -980,7 +996,21 @@ window.openEvento = function(id=null) {
   $('modal-evento').style.display = 'flex';
 }
 
-function updateAutoEvento() {
+function updateAutoEvento(forceDynamic = false) {
+  if (eventoEditId && !forceDynamic) {
+    const e = eventos.find(x => x.id === eventoEditId);
+    if (e && isPastEvent(e.data) && e.gradC1 !== undefined) {
+      $('ev-instaC1').value = e.instaC1 || '';
+      $('ev-gradC1').value  = e.gradC1 || '';
+      $('ev-especC1').value = e.especC1 || '';
+      $('ev-instaC2').value = e.instaC2 || '';
+      $('ev-gradC2').value  = e.gradC2 || '';
+      $('ev-especC2').value = e.especC2 || '';
+      $('ev-endereco').value = e.endereco || '';
+      return;
+    }
+  }
+
   const l1 = getLutador($('ev-nomeC1').value);
   const l2 = getLutador($('ev-nomeC2').value);
   const ct = getCT($('ev-ct').value);
@@ -1006,6 +1036,15 @@ window.saveEvento = async function() {
     obsC2:    $('ev-obsC2').value.trim(),
     ct:       $('ev-ct').value.trim(),
     link:     $('ev-link').value.trim(),
+    
+    // Armazena informações históricas para manter integridade no futuro
+    instaC1:  $('ev-instaC1').value.trim(),
+    gradC1:   $('ev-gradC1').value.trim(),
+    especC1:  $('ev-especC1').value.trim(),
+    instaC2:  $('ev-instaC2').value.trim(),
+    gradC2:   $('ev-gradC2').value.trim(),
+    especC2:  $('ev-especC2').value.trim(),
+    endereco: $('ev-endereco').value.trim()
   };
   try {
     if (eventoEditId) {
@@ -1511,9 +1550,9 @@ function showSetup() {
 
 // ── Event listeners ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  $('ev-nomeC1').addEventListener('input', updateAutoEvento);
-  $('ev-nomeC2').addEventListener('input', updateAutoEvento);
-  $('ev-ct').addEventListener('input', updateAutoEvento);
+  $('ev-nomeC1').addEventListener('input', () => updateAutoEvento(true));
+  $('ev-nomeC2').addEventListener('input', () => updateAutoEvento(true));
+  $('ev-ct').addEventListener('input', () => updateAutoEvento(true));
 
   $('search-eventos').addEventListener('input', e => {
     eventoSearch = e.target.value; eventoPage = 1; renderEventos();
