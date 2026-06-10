@@ -443,6 +443,97 @@
   }
   .form-input.obs:focus { border-color: var(--gold); }
 
+  select.form-select {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888899' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+    cursor: pointer;
+  }
+
+  /* ── AVATARS E UPLOAD ── */
+  .fighter-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg3);
+  }
+  .highlight-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--gold);
+    box-shadow: 0 0 10px rgba(244, 162, 97, 0.3);
+    flex-shrink: 0;
+    background: var(--bg3);
+  }
+  .podium-avatar {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    flex-shrink: 0;
+    margin: 8px auto 12px;
+    display: block;
+  }
+  .podium-card.first .podium-avatar { border-color: var(--gold); box-shadow: 0 0 12px rgba(244,162,97,0.4); }
+  .podium-card.second .podium-avatar { border-color: #a8dadc; box-shadow: 0 0 12px rgba(168,218,220,0.3); }
+  .podium-card.third .podium-avatar { border-color: #cd7f32; box-shadow: 0 0 12px rgba(205,127,50,0.3); }
+
+  .foto-upload-container {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 4px;
+    width: 100%;
+  }
+  .foto-preview-box {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+  }
+  .foto-preview-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .foto-preview-box span {
+    font-size: 28px;
+    color: var(--muted);
+  }
+  .foto-upload-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-grow: 1;
+  }
+  .foto-upload-buttons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .form-input-sm {
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+
   /* ── EMPTY STATE ── */
   .empty {
     text-align: center;
@@ -1111,15 +1202,100 @@ function isPastEvent(dateStr) {
   return evDate < new Date();
 }
 
-// ── Datalist helper function ──────────────────────────
-function updateDatalists() {
-  const lutadoresList = $('lutadores-list');
-  if (lutadoresList) {
-    lutadoresList.innerHTML = lutadores.map(l => `<option value="${l.nome}"></option>`).join('');
+function getEventTimestamp(e) {
+  if (!e.data) return 0;
+  const parts = e.data.split('/');
+  if (parts.length !== 3) return 0;
+  const [d, m, y] = parts;
+  const time = e.horario || '00:00';
+  const year = parseInt(y, 10);
+  const month = parseInt(m, 10) - 1;
+  const day = parseInt(d, 10);
+  const [hour, min] = time.split(':').map(x => parseInt(x, 10) || 0);
+  return new Date(year, month, day, hour, min).getTime();
+}
+
+async function renumberEvents() {
+  try {
+    const snap = await getDocs(collection(db, 'eventos'));
+    const allEvents = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Ordenar cronologicamente (do mais antigo para o mais novo)
+    allEvents.sort((a, b) => getEventTimestamp(a) - getEventTimestamp(b));
+
+    const batch = writeBatch(db);
+    let changedCount = 0;
+    
+    allEvents.forEach((e, idx) => {
+      const correctNum = idx + 1;
+      if (e.numero !== correctNum) {
+        batch.update(doc(db, 'eventos', e.id), { numero: correctNum });
+        changedCount++;
+      }
+    });
+
+    if (changedCount > 0) {
+      await batch.commit();
+      console.log(`Reordenados ${changedCount} eventos no Firestore.`);
+    }
+  } catch (err) {
+    console.error('Erro na renumeração automática:', err);
   }
+}
+
+async function checkAndRenumberEvents(eventsList) {
+  if (!eventsList || eventsList.length === 0) return;
+  const sorted = [...eventsList].sort((a, b) => getEventTimestamp(a) - getEventTimestamp(b));
+  
+  let mismatched = false;
+  for (let i = 0; i < sorted.length; i++) {
+    if (sorted[i].numero !== i + 1) {
+      mismatched = true;
+      break;
+    }
+  }
+
+  if (mismatched) {
+    console.log("Inconsistências de numeração cronológica detectadas. Corrigindo...");
+    await renumberEvents();
+    await loadEventos();
+    renderAll();
+  }
+}
+
+// ── Datalist & Select helper function ──────────────────
+function updateDatalists() {
+  const c1Select = $('ev-nomeC1');
+  const c2Select = $('ev-nomeC2');
+  if (c1Select && c2Select) {
+    const prevC1 = c1Select.value;
+    const prevC2 = c2Select.value;
+
+    const sorted = [...lutadores].sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    const optionsHTML = '<option value="">— Selecione um lutador —</option>' + 
+                        sorted.map(l => `<option value="${l.nome}">${l.nome}</option>`).join('');
+
+    c1Select.innerHTML = optionsHTML;
+    c2Select.innerHTML = optionsHTML;
+
+    c1Select.value = prevC1;
+    c2Select.value = prevC2;
+  }
+
   const ctsList = $('cts-list');
   if (ctsList) {
     ctsList.innerHTML = cts.map(c => `<option value="${c.nome}"></option>`).join('');
+  }
+}
+
+function ensureSelectOption(selectEl, value) {
+  if (!value) return;
+  const exists = Array.from(selectEl.options).some(o => o.value === value);
+  if (!exists) {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.textContent = value + ' (Ex-lutador)';
+    selectEl.appendChild(opt);
   }
 }
 
@@ -1185,6 +1361,7 @@ async function initFirebase() {
     updateFirebaseBadge(true);
     await loadAll();
     showSection('painel');
+    checkAndRenumberEvents(eventos);
   } catch(e) {
     console.error(e);
     updateFirebaseBadge(false);
@@ -1353,7 +1530,10 @@ function renderPainel() {
       // Card Lutador 1
       const cardL1 = el('div', 'highlight-card');
       cardL1.innerHTML = `
-        <div class="highlight-card-title">🥋 LUTADOR 1: <span>${lutaPrincipal.nomeC1 || '-'}</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <img src="${getLutadorFoto(l1)}" class="highlight-avatar">
+          <div class="highlight-card-title" style="margin:0">LUTADOR 1: <span>${lutaPrincipal.nomeC1 || '-'}</span></div>
+        </div>
         <div class="highlight-detail">
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Faixa / Grau</span>
@@ -1385,7 +1565,10 @@ function renderPainel() {
       // Card Lutador 2
       const cardL2 = el('div', 'highlight-card');
       cardL2.innerHTML = `
-        <div class="highlight-card-title">🥋 LUTADOR 2: <span>${lutaPrincipal.nomeC2 || '-'}</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <img src="${getLutadorFoto(l2)}" class="highlight-avatar">
+          <div class="highlight-card-title" style="margin:0">LUTADOR 2: <span>${lutaPrincipal.nomeC2 || '-'}</span></div>
+        </div>
         <div class="highlight-detail">
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Faixa / Grau</span>
@@ -1589,7 +1772,12 @@ function renderLutadores() {
     
     const tr = el('tr');
     tr.innerHTML = `
-      <td style="font-weight:500">${l.nome||'-'}</td>
+      <td style="font-weight:500">
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${getLutadorFoto(l)}" class="fighter-avatar">
+          <span>${l.nome||'-'}</span>
+        </div>
+      </td>
       <td style="font-size:11px;color:var(--muted)">${l.instagram ? '@'+l.instagram : '-'}</td>
       <td>${l.faixa ? `<span class="faixa-badge">${l.faixa}${l.grau?' '+l.grau:''}</span>` : '-'}</td>
       <td style="font-size:12px;color:var(--muted)">${l.equipe||'-'}</td>
@@ -1697,6 +1885,7 @@ function renderRanking() {
       const card = el('div', `podium-card ${cfg.key}`);
       card.innerHTML = `
         <div class="podium-badge">${cfg.medal}</div>
+        <img src="${getLutadorFoto(l)}" class="podium-avatar">
         <div class="podium-name" title="${l.nome || ''}">${l.nome || '-'}</div>
         <div class="podium-wins ${cfg.key}">${l.totalWins} vitórias</div>
         <div class="podium-team" title="${l.equipe || ''}">${l.equipe || '-'}</div>
@@ -1715,7 +1904,12 @@ function renderRanking() {
     const tr = el('tr');
     tr.innerHTML = `
       <td style="font-weight:600">${i + 1}°</td>
-      <td style="font-weight:500">${l.nome || '-'}</td>
+      <td style="font-weight:500">
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${getLutadorFoto(l)}" class="fighter-avatar">
+          <span>${l.nome || '-'}</span>
+        </div>
+      </td>
       <td style="font-size:12px;color:var(--muted)">${l.equipe || '-'}</td>
       <td>${l.faixa ? `<span class="faixa-badge">${l.faixa}${l.grau ? ' ' + l.grau : ''}</span>` : '-'}</td>
       <td style="font-family:var(--font-mono);font-size:11px">${l.winsFellas}</td>
@@ -1747,12 +1941,16 @@ window.openEvento = function(id=null) {
   $('modal-evento-title').innerHTML = id ? 'EDITAR <span>EVENTO</span>' : 'NOVO <span>EVENTO</span>';
 
   // Preenche form
-  $('ev-numero').value  = e.numero || maxN;
+  $('ev-numero').value  = id ? (e.numero || '') : 'Automático';
   $('ev-data').value    = dbToInputDate(e.data || '');
   $('ev-horario').innerHTML = selectOptions(HORARIOS, e.horario||'19:00');
   $('ev-tipo').innerHTML    = selectOptions(TIPOS, e.tipo||'PODCAST');
   
-  // Usando datalist, colocamos o valor do input diretamente
+  // Popula dropdowns e garante exibição de nomes históricos (ex-lutadores)
+  updateDatalists();
+  ensureSelectOption($('ev-nomeC1'), e.nomeC1);
+  ensureSelectOption($('ev-nomeC2'), e.nomeC2);
+
   $('ev-nomeC1').value  = e.nomeC1 || '';
   $('ev-nomeC2').value  = e.nomeC2 || '';
   $('ev-obsC1').value   = e.obsC1  || '';
@@ -1820,17 +2018,17 @@ function updateAutoEvento(forceDynamic = false) {
 
 window.saveEvento = async function() {
   const data = {
-    numero:   parseInt($('ev-numero').value) || 0,
+    numero:   eventoEditId ? (eventos.find(x => x.id === eventoEditId)?.numero || 0) : 0,
     data:     inputToDbDate($('ev-data').value),
     horario:  $('ev-horario').value,
     tipo:     $('ev-tipo').value,
-    nomeC1:   $('ev-nomeC1').value.trim(),
-    nomeC2:   $('ev-nomeC2').value.trim(),
+    nomeC1:   $('ev-nomeC1').value,
+    nomeC2:   $('ev-nomeC2').value,
     obsC1:    $('ev-obsC1').value.trim(),
     obsC2:    $('ev-obsC2').value.trim(),
     ct:       $('ev-ct').value.trim(),
     link:     $('ev-link').value.trim(),
-    vencedor: ($('ev-tipo').value === 'LUTA') ? $('ev-vencedor').value : '',
+    vencedor: ($('ev-tipo').value === 'LUTA' ? $('ev-vencedor').value : ''),
     
     // Armazena informações históricas para manter integridade no futuro
     instaC1:  $('ev-instaC1').value.trim(),
@@ -1850,6 +2048,7 @@ window.saveEvento = async function() {
       toast('Evento salvo!');
     }
     closeModal('modal-evento');
+    await renumberEvents();
     await loadEventos();
     renderAll();
   } catch(e) { toast('Erro ao salvar: '+e.message,'error'); }
@@ -1859,7 +2058,91 @@ window.deleteEvento = async function(id) {
   if (!confirm('Excluir este evento?')) return;
   await deleteDoc(doc(db,'eventos',id));
   toast('Evento excluído!');
-  await loadEventos(); renderAll();
+  await renumberEvents();
+  await loadEventos();
+  renderAll();
+}
+
+// Helpers de Foto de Perfil
+window.handleFotoUpload = function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 180;
+      const MAX_HEIGHT = 180;
+      let width = img.width;
+      let height = img.height;
+
+      // Cortar em quadrado
+      const size = Math.min(width, height);
+      const startX = (width - size) / 2;
+      const startY = (height - size) / 2;
+
+      canvas.width = MAX_WIDTH;
+      canvas.height = MAX_HEIGHT;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, startX, startY, size, size, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+
+      const base64 = canvas.toDataURL('image/jpeg', 0.85);
+      setLutadorFoto(base64);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.setLutadorFoto = function(val) {
+  const img = $('lt-foto-preview');
+  const placeholder = $('lt-foto-placeholder');
+  const removeBtn = $('lt-foto-remove-btn');
+  const urlInput = $('lt-foto-url');
+
+  if (val) {
+    img.src = val;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+    removeBtn.style.display = 'inline-block';
+    
+    if (val.startsWith('data:')) {
+      urlInput.value = '';
+      urlInput.placeholder = 'Imagem carregada localmente';
+    } else {
+      urlInput.value = val;
+      urlInput.placeholder = 'Ou cole a URL da imagem...';
+    }
+    img.dataset.foto = val;
+  } else {
+    img.src = '';
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
+    removeBtn.style.display = 'none';
+    urlInput.value = '';
+    urlInput.placeholder = 'Ou cole a URL da imagem...';
+    img.dataset.foto = '';
+  }
+};
+
+window.handleFotoUrlInput = function(val) {
+  if (val.trim()) {
+    setLutadorFoto(val.trim());
+  } else {
+    setLutadorFoto('');
+  }
+};
+
+window.removeLutadorFoto = function() {
+  setLutadorFoto('');
+  $('lt-foto-file').value = '';
+};
+
+function getLutadorFoto(l) {
+  if (l && l.foto) return l.foto;
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%232d2d3a"/><path d="M50 20c8.3 0 15 6.7 15 15s-6.7 15-15 15-15-6.7-15-15 6.7-15 15-15zm0 35c15.1 0 40 7.6 40 22.5V80H10v-2.5c0-14.9 24.9-22.5 40-22.5z" fill="%23888899"/></svg>`;
 }
 
 // Lutador
@@ -1876,6 +2159,7 @@ window.openLutador = function(id=null) {
   $('lt-peso').value     = l.peso     || '';
   $('lt-altura').value   = l.altura   || '';
   $('lt-vitorias-base').value = l.vitoriasBase !== undefined ? l.vitoriasBase : '';
+  setLutadorFoto(l.foto || '');
   $('modal-lutador').style.display = 'flex';
 }
 
@@ -1890,6 +2174,7 @@ window.saveLutador = async function() {
     peso:      $('lt-peso').value,
     altura:    $('lt-altura').value,
     vitoriasBase: parseInt($('lt-vitorias-base').value) || 0,
+    foto:      $('lt-foto-preview').dataset.foto || ''
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
 
@@ -2305,11 +2590,11 @@ function showSetup() {
 
 // ── Event listeners ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  $('ev-nomeC1').addEventListener('input', () => {
+  $('ev-nomeC1').addEventListener('change', () => {
     updateAutoEvento(true);
     updateVencedorOptions($('ev-vencedor').value);
   });
-  $('ev-nomeC2').addEventListener('input', () => {
+  $('ev-nomeC2').addEventListener('change', () => {
     updateAutoEvento(true);
     updateVencedorOptions($('ev-vencedor').value);
   });
@@ -2625,7 +2910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid form-grid-3">
           <div class="form-group">
             <label class="form-label">N°</label>
-            <input type="number" class="form-input" id="ev-numero">
+            <input type="text" class="form-input" id="ev-numero" readonly placeholder="Automático">
           </div>
           <div class="form-group">
             <label class="form-label">Data</label>
@@ -2651,7 +2936,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nome</label>
-            <input type="text" class="form-input" id="ev-nomeC1" list="lutadores-list" placeholder="Digite ou selecione...">
+            <select class="form-select" id="ev-nomeC1"></select>
           </div>
           <div class="form-group">
             <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
@@ -2677,7 +2962,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-grid">
           <div class="form-group">
             <label class="form-label">Nome</label>
-            <input type="text" class="form-input" id="ev-nomeC2" list="lutadores-list" placeholder="Digite ou selecione...">
+            <select class="form-select" id="ev-nomeC2"></select>
           </div>
           <div class="form-group">
             <label class="form-label">Instagram <span class="auto-tag">✦ auto</span></label>
@@ -2768,6 +3053,23 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-group">
           <label class="form-label">Vitórias Iniciais</label>
           <input type="number" class="form-input" id="lt-vitorias-base" placeholder="0" min="0">
+        </div>
+        <div class="form-group form-full">
+          <label class="form-label">Foto de Perfil</label>
+          <div class="foto-upload-container">
+            <div class="foto-preview-box" id="lt-foto-preview-container">
+              <img id="lt-foto-preview" src="" style="display:none" data-foto="">
+              <span id="lt-foto-placeholder">👤</span>
+            </div>
+            <div class="foto-upload-actions">
+              <div class="foto-upload-buttons">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('lt-foto-file').click()">📂 Escolher Arquivo</button>
+                <button type="button" class="btn btn-danger btn-sm" id="lt-foto-remove-btn" onclick="removeLutadorFoto()" style="display:none">🗑 Remover</button>
+              </div>
+              <input type="file" id="lt-foto-file" accept="image/*" style="display:none" onchange="handleFotoUpload(event)">
+              <input type="text" class="form-input form-input-sm" id="lt-foto-url" placeholder="Ou cole a URL da imagem..." oninput="handleFotoUrlInput(this.value)">
+            </div>
+          </div>
         </div>
       </div>
     </div>
