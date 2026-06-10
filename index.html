@@ -1180,6 +1180,7 @@ function dbToInputDate(dbDate) {
   const parts = dbDate.split('/');
   if (parts.length !== 3) return '';
   let [d, m, y] = parts;
+  y = y.trim();
   if (y.length === 2) y = '20' + y;
   return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 }
@@ -1197,6 +1198,7 @@ function isPastEvent(dateStr) {
   const parts = dateStr.split('/');
   if (parts.length !== 3) return false;
   let [d, m, y] = parts;
+  y = y.trim();
   if (y.length === 2) y = '20' + y;
   const evDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T23:59:59`);
   return evDate < new Date();
@@ -1206,11 +1208,14 @@ function getEventTimestamp(e) {
   if (!e.data) return 0;
   const parts = e.data.split('/');
   if (parts.length !== 3) return 0;
-  const [d, m, y] = parts;
+  let [d, m, y] = parts;
+  let year = parseInt(y, 10) || 0;
+  if (y.trim().length === 2 || year < 100) {
+    year += 2000;
+  }
+  const month = (parseInt(m, 10) || 1) - 1;
+  const day = parseInt(d, 10) || 1;
   const time = e.horario || '00:00';
-  const year = parseInt(y, 10);
-  const month = parseInt(m, 10) - 1;
-  const day = parseInt(d, 10);
   const [hour, min] = time.split(':').map(x => parseInt(x, 10) || 0);
   return new Date(year, month, day, hour, min).getTime();
 }
@@ -2142,7 +2147,7 @@ window.removeLutadorFoto = function() {
 
 function getLutadorFoto(l) {
   if (l && l.foto) return l.foto;
-  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="%232d2d3a"/><path d="M50 20c8.3 0 15 6.7 15 15s-6.7 15-15 15-15-6.7-15-15 6.7-15 15-15zm0 35c15.1 0 40 7.6 40 22.5V80H10v-2.5c0-14.9 24.9-22.5 40-22.5z" fill="%23888899"/></svg>`;
+  return 'goodfellas-logo.png';
 }
 
 // Lutador
