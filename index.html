@@ -1550,7 +1550,7 @@ function renderPainel() {
           </div>
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Instagram</span>
-            <span class="highlight-detail-value">${l1.instagram ? '@' + l1.instagram : '-'}</span>
+            <span class="highlight-detail-value">${renderInstagram(l1.instagram)}</span>
           </div>
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Idade</span>
@@ -1585,7 +1585,7 @@ function renderPainel() {
           </div>
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Instagram</span>
-            <span class="highlight-detail-value">${l2.instagram ? '@' + l2.instagram : '-'}</span>
+            <span class="highlight-detail-value">${renderInstagram(l2.instagram)}</span>
           </div>
           <div class="highlight-detail-row">
             <span class="highlight-detail-label">Idade</span>
@@ -1654,7 +1654,7 @@ function renderPainel() {
             </div>
             <div class="highlight-detail-row">
               <span class="highlight-detail-label">Instagram</span>
-              <span class="highlight-detail-value">${l1.instagram ? '@' + l1.instagram : '-'}</span>
+              <span class="highlight-detail-value">${renderInstagram(l1.instagram)}</span>
             </div>
             <div class="highlight-detail-row">
               <span class="highlight-detail-label">Vitórias</span>
@@ -1783,7 +1783,7 @@ function renderLutadores() {
           <span>${l.nome||'-'}</span>
         </div>
       </td>
-      <td style="font-size:11px;color:var(--muted)">${l.instagram ? '@'+l.instagram : '-'}</td>
+      <td style="font-size:11px;">${renderInstagram(l.instagram)}</td>
       <td>${l.faixa ? `<span class="faixa-badge">${l.faixa}${l.grau?' '+l.grau:''}</span>` : '-'}</td>
       <td style="font-size:12px;color:var(--muted)">${l.equipe||'-'}</td>
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.idade||'-'}</td>
@@ -2012,10 +2012,10 @@ function updateAutoEvento(forceDynamic = false) {
   const l2 = getLutador($('ev-nomeC2').value);
   const ct = getCT($('ev-ct').value);
 
-  $('ev-instaC1').value = l1.instagram ? '@'+l1.instagram : '';
+  $('ev-instaC1').value = l1.instagram || '';
   $('ev-gradC1').value  = graduacao(l1);
   $('ev-especC1').value = especificacoes(l1);
-  $('ev-instaC2').value = l2.instagram ? '@'+l2.instagram : '';
+  $('ev-instaC2').value = l2.instagram || '';
   $('ev-gradC2').value  = graduacao(l2);
   $('ev-especC2').value = especificacoes(l2);
   $('ev-endereco').value = ct.endereco || '';
@@ -2144,6 +2144,31 @@ window.removeLutadorFoto = function() {
   setLutadorFoto('');
   $('lt-foto-file').value = '';
 };
+
+function renderInstagram(val, defaultText = '-') {
+  if (!val) return defaultText;
+  let url = val.trim();
+  let display = val.trim();
+  
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    const username = url.startsWith('@') ? url.substring(1) : url;
+    url = `https://instagram.com/${username}`;
+    display = `@${username}`;
+  } else {
+    try {
+      const parsedUrl = new URL(url);
+      const parts = parsedUrl.pathname.split('/').filter(x => x);
+      if (parts.length > 0) {
+        display = `@${parts[0]}`;
+      } else {
+        display = 'Instagram';
+      }
+    } catch (e) {
+      display = 'Instagram';
+    }
+  }
+  return `<a href="${url}" target="_blank" style="color:var(--accent);text-decoration:underline">${display}</a>`;
+}
 
 function getLutadorFoto(l) {
   if (l && l.foto) return l.foto;
@@ -3029,7 +3054,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="form-group form-full">
           <label class="form-label">Instagram</label>
-          <input type="text" class="form-input" id="lt-instagram" placeholder="sem o @">
+          <input type="text" class="form-input" id="lt-instagram" placeholder="Link do perfil do Instagram">
         </div>
         <div class="form-group">
           <label class="form-label">Faixa</label>
