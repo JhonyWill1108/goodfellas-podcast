@@ -6,6 +6,7 @@
 <title>FellasCast — Controle de Eventos BJJ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" onload="if (window.initGoogleAuth) window.initGoogleAuth()" async defer></script>
 <style>
   :root {
     --bg:        #0a0a0f;
@@ -1114,6 +1115,135 @@
       transform: translateX(-50%);
     }
   }
+
+  /* ── MULTI FOTO UPLOAD SLOTS ── */
+  .fotos-slots-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .foto-slot {
+    position: relative;
+    aspect-ratio: 1;
+    background: var(--bg3);
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s ease;
+  }
+  .foto-slot:hover {
+    border-color: var(--accent);
+  }
+  .foto-slot.has-image {
+    border-style: solid;
+  }
+  .foto-slot.is-cover {
+    border-color: var(--gold);
+    box-shadow: 0 0 8px rgba(244, 162, 97, 0.3);
+  }
+  .foto-slot-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .foto-slot-placeholder {
+    font-size: 24px;
+    color: var(--muted);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .foto-slot-placeholder span {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .foto-slot-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--text);
+    border: none;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.2s;
+  }
+  .foto-slot-remove:hover {
+    background: var(--accent);
+  }
+  .foto-slot-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 4px 0;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  .foto-slot.is-cover .foto-slot-badge {
+    background: var(--gold);
+    color: #000;
+  }
+  .gdrive-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 11px;
+  }
+  .gdrive-status-text {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .gdrive-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+  }
+  .gdrive-status-dot.connected {
+    background: var(--success);
+    box-shadow: 0 0 6px var(--success);
+  }
+  .gdrive-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 4px;
+    padding: 2px 8px;
+    cursor: pointer;
+    font-family: var(--font-body);
+    font-size: 10px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .gdrive-btn:hover {
+    border-color: var(--text);
+    color: var(--text);
+  }
 </style>
 </head>
 <body>
@@ -1156,6 +1286,23 @@ if (storedConfig) {
 // ══════════════════════════════════════════════════════
 
 const CONFIGURED = FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.includes("SUA_");
+
+// ══════════════════════════════════════════════════════
+// 🔑 CONFIGURAÇÃO GOOGLE DRIVE API
+// ══════════════════════════════════════════════════════
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID";
+// ══════════════════════════════════════════════════════
+
+let googleAccessToken = localStorage.getItem('google_access_token') || null;
+let googleTokenClient = null;
+let googleDriveConnected = false;
+let pendingUploadCallback = null;
+
+// Slots de fotos do modal ativo (temporários)
+let currentLtFotos = ['', '', ''];
+let currentCtFotos = ['', '', ''];
+let activeLtCover = '';
+let activeCtCover = '';
 
 let db, app;
 let eventos = [], lutadores = [], cts = [];
@@ -1827,8 +1974,14 @@ function renderCTs() {
 
   slice.forEach(c => {
     const tr = el('tr');
+    const logoUrl = c.foto || 'goodfellas-logo.png';
     tr.innerHTML = `
-      <td style="font-weight:500">${c.nome||'-'}</td>
+      <td style="font-weight:500">
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${logoUrl}" class="fighter-avatar" onerror="this.src='goodfellas-logo.png'">
+          <span>${c.nome||'-'}</span>
+        </div>
+      </td>
       <td style="font-size:12px;color:var(--muted)">${c.dono||'-'}</td>
       <td style="font-size:12px;color:var(--muted);max-width:300px">${c.endereco||'-'}</td>
       <td>
@@ -2068,81 +2221,327 @@ window.deleteEvento = async function(id) {
   renderAll();
 }
 
-// Helpers de Foto de Perfil
-window.handleFotoUpload = function(event) {
+// Helpers de Foto (Google Drive & Slots Múltiplos)
+window.initGoogleAuth = function() {
+  if (typeof google === 'undefined') {
+    console.warn('Google Identity Services script not loaded yet.');
+    return;
+  }
+  
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    callback: (tokenResponse) => {
+      if (tokenResponse && tokenResponse.access_token) {
+        googleAccessToken = tokenResponse.access_token;
+        const expiry = Date.now() + tokenResponse.expires_in * 1000;
+        localStorage.setItem('google_access_token', googleAccessToken);
+        localStorage.setItem('google_access_token_expiry', expiry);
+        updateGoogleConnectionStatus();
+        toast('Google Drive conectado com sucesso!');
+        if (pendingUploadCallback) {
+          const cb = pendingUploadCallback;
+          pendingUploadCallback = null;
+          cb();
+        }
+      }
+    },
+  });
+  
+  updateGoogleConnectionStatus();
+};
+
+window.toggleGoogleDrive = function() {
+  if (googleDriveConnected) {
+    googleAccessToken = null;
+    localStorage.removeItem('google_access_token');
+    localStorage.removeItem('google_access_token_expiry');
+    updateGoogleConnectionStatus();
+    toast('Google Drive desconectado.');
+  } else {
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+      alert('Por favor, configure o GOOGLE_CLIENT_ID no topo do arquivo index.html.');
+      return;
+    }
+    if (!googleTokenClient) {
+      window.initGoogleAuth();
+    }
+    if (googleTokenClient) {
+      googleTokenClient.requestAccessToken({ prompt: 'consent' });
+    } else {
+      toast('Carregando biblioteca do Google...', 'error');
+    }
+  }
+};
+
+window.updateGoogleConnectionStatus = function() {
+  const expiry = parseInt(localStorage.getItem('google_access_token_expiry') || '0');
+  const connected = googleAccessToken && Date.now() < expiry;
+  googleDriveConnected = connected;
+  
+  ['lt', 'ct'].forEach(prefix => {
+    const dot = $(`${prefix}-gdrive-dot`);
+    const text = $(`${prefix}-gdrive-text`);
+    const btn = $(`${prefix}-gdrive-btn`);
+    
+    if (dot && text && btn) {
+      if (connected) {
+        dot.classList.add('connected');
+        text.textContent = 'Google Drive ativo';
+        btn.textContent = 'Desconectar';
+      } else {
+        dot.classList.remove('connected');
+        text.textContent = 'Google Drive offline';
+        btn.textContent = 'Conectar';
+      }
+    }
+  });
+};
+
+async function getOrCreateFolder() {
+  const folderName = 'FellasCast_Media';
+  const queryUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(folderName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  
+  let response = await fetch(queryUrl, {
+    headers: { 'Authorization': `Bearer ${googleAccessToken}` }
+  });
+  
+  if (!response.ok) {
+    if (response.status === 401) {
+      googleAccessToken = null;
+      localStorage.removeItem('google_access_token');
+      localStorage.removeItem('google_access_token_expiry');
+      updateGoogleConnectionStatus();
+      throw new Error('Sessão do Google Drive expirada. reconectando...');
+    }
+    throw new Error('Erro ao buscar pasta no Drive');
+  }
+  
+  let data = await response.json();
+  if (data.files && data.files.length > 0) {
+    return data.files[0].id;
+  }
+  
+  const createUrl = 'https://www.googleapis.com/drive/v3/files';
+  response = await fetch(createUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${googleAccessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name: folderName,
+      mimeType: 'application/vnd.google-apps.folder'
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error('Erro ao criar pasta no Drive');
+  }
+  
+  data = await response.json();
+  return data.id;
+}
+
+async function uploadToGoogleDrive(blob, filename) {
+  const folderId = await getOrCreateFolder();
+  
+  const metadata = {
+    name: filename,
+    parents: [folderId]
+  };
+  
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', blob);
+  
+  const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id';
+  let response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${googleAccessToken}`
+    },
+    body: form
+  });
+  
+  if (!response.ok) {
+    throw new Error('Erro no upload do arquivo');
+  }
+  
+  const fileData = await response.json();
+  const fileId = fileData.id;
+  
+  const shareUrl = `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`;
+  await fetch(shareUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${googleAccessToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      role: 'reader',
+      type: 'anyone'
+    })
+  });
+  
+  return `https://docs.google.com/uc?export=view&id=${fileId}`;
+}
+
+window.activeSlotPrefix = null;
+window.activeSlotIdx = null;
+
+window.triggerSlotUpload = function(prefix, idx) {
+  window.activeSlotPrefix = prefix;
+  window.activeSlotIdx = idx;
+  $(`${prefix}-file-input`).click();
+};
+
+window.handleSlotFileChange = async function(event, prefix) {
   const file = event.target.files[0];
   if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    const img = new Image();
-    img.onload = function() {
-      const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 180;
-      const MAX_HEIGHT = 180;
-      let width = img.width;
-      let height = img.height;
-
-      // Cortar em quadrado
-      const size = Math.min(width, height);
-      const startX = (width - size) / 2;
-      const startY = (height - size) / 2;
-
-      canvas.width = MAX_WIDTH;
-      canvas.height = MAX_HEIGHT;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, startX, startY, size, size, 0, 0, MAX_WIDTH, MAX_HEIGHT);
-
-      const base64 = canvas.toDataURL('image/jpeg', 0.85);
-      setLutadorFoto(base64);
+  
+  const idx = window.activeSlotIdx;
+  if (idx === null || idx === undefined) return;
+  
+  toast('Processando imagem...', 'info');
+  
+  // 1. Processar a imagem no canvas (quadrado 180x180)
+  const blob = await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 180;
+        const MAX_HEIGHT = 180;
+        const size = Math.min(img.width, img.height);
+        const startX = (img.width - size) / 2;
+        const startY = (img.height - size) / 2;
+        
+        canvas.width = MAX_WIDTH;
+        canvas.height = MAX_HEIGHT;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, startX, startY, size, size, 0, 0, MAX_WIDTH, MAX_HEIGHT);
+        
+        canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.85);
+      };
+      img.src = e.target.result;
     };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-};
-
-window.setLutadorFoto = function(val) {
-  const img = $('lt-foto-preview');
-  const placeholder = $('lt-foto-placeholder');
-  const removeBtn = $('lt-foto-remove-btn');
-  const urlInput = $('lt-foto-url');
-
-  if (val) {
-    img.src = val;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
-    removeBtn.style.display = 'inline-block';
-    
-    if (val.startsWith('data:')) {
-      urlInput.value = '';
-      urlInput.placeholder = 'Imagem carregada localmente';
-    } else {
-      urlInput.value = val;
-      urlInput.placeholder = 'Ou cole a URL da imagem...';
+    reader.readAsDataURL(file);
+  });
+  
+  if (!blob) {
+    toast('Erro ao processar imagem.', 'error');
+    return;
+  }
+  
+  let fileUrl = '';
+  if (googleDriveConnected) {
+    toast('Enviando para o Google Drive...', 'info');
+    try {
+      const timestamp = Date.now();
+      const filename = `${prefix}_slot_${idx + 1}_${timestamp}.jpg`;
+      fileUrl = await uploadToGoogleDrive(blob, filename);
+      toast('Upload concluído!');
+    } catch (err) {
+      console.error(err);
+      toast('Falha no Drive. Usando armazenamento local...', 'error');
+      fileUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
     }
-    img.dataset.foto = val;
   } else {
-    img.src = '';
-    img.style.display = 'none';
-    placeholder.style.display = 'block';
-    removeBtn.style.display = 'none';
-    urlInput.value = '';
-    urlInput.placeholder = 'Ou cole a URL da imagem...';
-    img.dataset.foto = '';
+    fileUrl = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    });
+    toast('Imagem carregada localmente.');
   }
+  
+  const fotosList = prefix === 'lt' ? currentLtFotos : currentCtFotos;
+  fotosList[idx] = fileUrl;
+  
+  // Se nenhuma capa estiver definida, define este slot como capa
+  const currentCover = prefix === 'lt' ? activeLtCover : activeCtCover;
+  if (!currentCover || !fotosList.includes(currentCover)) {
+    if (prefix === 'lt') activeLtCover = fileUrl;
+    else activeCtCover = fileUrl;
+  }
+  
+  renderSlotsPreview(prefix);
+  event.target.value = '';
 };
 
-window.handleFotoUrlInput = function(val) {
-  if (val.trim()) {
-    setLutadorFoto(val.trim());
+window.setCoverSlot = function(prefix, idx) {
+  const fotosList = prefix === 'lt' ? currentLtFotos : currentCtFotos;
+  if (!fotosList[idx]) return;
+  
+  if (prefix === 'lt') {
+    activeLtCover = fotosList[idx];
   } else {
-    setLutadorFoto('');
+    activeCtCover = fotosList[idx];
   }
+  renderSlotsPreview(prefix);
 };
 
-window.removeLutadorFoto = function() {
-  setLutadorFoto('');
-  $('lt-foto-file').value = '';
+window.removeSlotFoto = function(event, prefix, idx) {
+  event.stopPropagation();
+  const fotosList = prefix === 'lt' ? currentLtFotos : currentCtFotos;
+  const removedUrl = fotosList[idx];
+  fotosList[idx] = '';
+  
+  if (prefix === 'lt') {
+    if (activeLtCover === removedUrl) {
+      activeLtCover = fotosList.find(f => f) || '';
+    }
+  } else {
+    if (activeCtCover === removedUrl) {
+      activeCtCover = fotosList.find(f => f) || '';
+    }
+  }
+  
+  renderSlotsPreview(prefix);
+};
+
+window.renderSlotsPreview = function(prefix) {
+  const fotosList = prefix === 'lt' ? currentLtFotos : currentCtFotos;
+  const coverUrl = prefix === 'lt' ? activeLtCover : activeCtCover;
+  const container = $(`${prefix}-fotos-container`);
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  for (let i = 0; i < 3; i++) {
+    const url = fotosList[i];
+    const isCover = url && url === coverUrl;
+    
+    const slot = el('div', `foto-slot ${url ? 'has-image' : ''} ${isCover ? 'is-cover' : ''}`);
+    slot.onclick = () => {
+      if (!url) triggerSlotUpload(prefix, i);
+    };
+    slot.ondblclick = () => {
+      if (url) setCoverSlot(prefix, i);
+    };
+    
+    if (url) {
+      slot.innerHTML = `
+        <img class="foto-slot-preview" src="${url}">
+        <button type="button" class="foto-slot-remove" onclick="removeSlotFoto(event, '${prefix}', ${i})">✕</button>
+        <div class="foto-slot-badge" onclick="event.stopPropagation(); setCoverSlot('${prefix}', ${i})">${isCover ? 'Capa' : 'Definir Capa'}</div>
+      `;
+    } else {
+      slot.innerHTML = `
+        <div class="foto-slot-placeholder">
+          <span>📷</span>
+          <span>Foto ${i + 1}</span>
+        </div>
+      `;
+    }
+    container.appendChild(slot);
+  }
 };
 
 function renderInstagram(val, defaultText = '-') {
@@ -2189,11 +2588,24 @@ window.openLutador = function(id=null) {
   $('lt-peso').value     = l.peso     || '';
   $('lt-altura').value   = l.altura   || '';
   $('lt-vitorias-base').value = l.vitoriasBase !== undefined ? l.vitoriasBase : '';
-  setLutadorFoto(l.foto || '');
+  
+  currentLtFotos = ['', '', ''];
+  if (l.fotos && Array.isArray(l.fotos)) {
+    for (let i = 0; i < 3; i++) {
+      currentLtFotos[i] = l.fotos[i] || '';
+    }
+  } else if (l.foto) {
+    currentLtFotos[0] = l.foto;
+  }
+  activeLtCover = l.foto || currentLtFotos.find(f => f) || '';
+  
+  renderSlotsPreview('lt');
+  updateGoogleConnectionStatus();
   $('modal-lutador').style.display = 'flex';
 }
 
 window.saveLutador = async function() {
+  const coverUrl = activeLtCover || currentLtFotos.find(f => f) || '';
   const data = {
     nome:      $('lt-nome').value.trim(),
     instagram: $('lt-instagram').value.trim(),
@@ -2204,7 +2616,8 @@ window.saveLutador = async function() {
     peso:      $('lt-peso').value,
     altura:    $('lt-altura').value,
     vitoriasBase: parseInt($('lt-vitorias-base').value) || 0,
-    foto:      $('lt-foto-preview').dataset.foto || ''
+    foto:      coverUrl,
+    fotos:     currentLtFotos
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
 
@@ -2244,14 +2657,30 @@ window.openCT = function(id=null) {
   $('ct-nome').value    = c.nome    || '';
   $('ct-dono').value    = c.dono    || '';
   $('ct-endereco').value= c.endereco|| '';
+  
+  currentCtFotos = ['', '', ''];
+  if (c.fotos && Array.isArray(c.fotos)) {
+    for (let i = 0; i < 3; i++) {
+      currentCtFotos[i] = c.fotos[i] || '';
+    }
+  } else if (c.foto) {
+    currentCtFotos[0] = c.foto;
+  }
+  activeCtCover = c.foto || currentCtFotos.find(f => f) || '';
+  
+  renderSlotsPreview('ct');
+  updateGoogleConnectionStatus();
   $('modal-ct').style.display = 'flex';
 }
 
 window.saveCT = async function() {
+  const coverUrl = activeCtCover || currentCtFotos.find(f => f) || '';
   const data = {
     nome:     $('ct-nome').value.trim(),
     dono:     $('ct-dono').value.trim(),
     endereco: $('ct-endereco').value.trim(),
+    foto:     coverUrl,
+    fotos:    currentCtFotos
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
   try {
@@ -2679,6 +3108,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   initFirebase();
+  if (typeof google !== 'undefined') {
+    initGoogleAuth();
+  }
 });
 </script>
 
@@ -3085,20 +3517,22 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="number" class="form-input" id="lt-vitorias-base" placeholder="0" min="0">
         </div>
         <div class="form-group form-full">
-          <label class="form-label">Foto de Perfil</label>
-          <div class="foto-upload-container">
-            <div class="foto-preview-box" id="lt-foto-preview-container">
-              <img id="lt-foto-preview" src="" style="display:none" data-foto="">
-              <span id="lt-foto-placeholder">👤</span>
-            </div>
-            <div class="foto-upload-actions">
-              <div class="foto-upload-buttons">
-                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('lt-foto-file').click()">📂 Escolher Arquivo</button>
-                <button type="button" class="btn btn-danger btn-sm" id="lt-foto-remove-btn" onclick="removeLutadorFoto()" style="display:none">🗑 Remover</button>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Fotos de Perfil (até 3)</label>
+            <div class="gdrive-status-bar" style="margin-top:0">
+              <div class="gdrive-status-text">
+                <span class="gdrive-status-dot" id="lt-gdrive-dot"></span>
+                <span id="lt-gdrive-text" style="font-size:10px;">Google Drive offline</span>
               </div>
-              <input type="file" id="lt-foto-file" accept="image/*" style="display:none" onchange="handleFotoUpload(event)">
-              <input type="text" class="form-input form-input-sm" id="lt-foto-url" placeholder="Ou cole a URL da imagem..." oninput="handleFotoUrlInput(this.value)">
+              <button type="button" class="gdrive-btn" id="lt-gdrive-btn" onclick="toggleGoogleDrive()">Conectar</button>
             </div>
+          </div>
+          <div class="fotos-slots-container" id="lt-fotos-container">
+            <!-- Renderizado dinamicamente -->
+          </div>
+          <input type="file" id="lt-file-input" accept="image/*" style="display:none" onchange="handleSlotFileChange(event, 'lt')">
+          <div style="color:var(--muted); font-size:10px; margin-top:6px; line-height:1.4;">
+            * Clique em um slot para subir uma foto. O 1º com imagem vira capa. Clique duplo ou no badge para mudar.
           </div>
         </div>
       </div>
@@ -3130,6 +3564,25 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="form-group">
           <label class="form-label">Endereço completo</label>
           <input type="text" class="form-input" id="ct-endereco" placeholder="Rua, número, bairro, cidade">
+        </div>
+        <div class="form-group">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <label class="form-label">Logos do CT (até 3)</label>
+            <div class="gdrive-status-bar" style="margin-top:0">
+              <div class="gdrive-status-text">
+                <span class="gdrive-status-dot" id="ct-gdrive-dot"></span>
+                <span id="ct-gdrive-text" style="font-size:10px;">Google Drive offline</span>
+              </div>
+              <button type="button" class="gdrive-btn" id="ct-gdrive-btn" onclick="toggleGoogleDrive()">Conectar</button>
+            </div>
+          </div>
+          <div class="fotos-slots-container" id="ct-fotos-container">
+            <!-- Renderizado dinamicamente -->
+          </div>
+          <input type="file" id="ct-file-input" accept="image/*" style="display:none" onchange="handleSlotFileChange(event, 'ct')">
+          <div style="color:var(--muted); font-size:10px; margin-top:6px; line-height:1.4;">
+            * Clique em um slot para subir uma logo. O 1º com imagem vira capa. Clique duplo ou no badge para mudar.
+          </div>
         </div>
       </div>
     </div>
