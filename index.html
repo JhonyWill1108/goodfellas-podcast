@@ -1340,6 +1340,16 @@ function inputToDbDate(inputDate) {
   return `${d}/${m}/${y}`;
 }
 
+function getBrasiliaDate() {
+  try {
+    return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  } catch (e) {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+    return new Date(utc - (3 * 60 * 60 * 1000));
+  }
+}
+
 function isPastEvent(dateStr) {
   if (!dateStr) return false;
   const parts = dateStr.split('/');
@@ -1348,7 +1358,7 @@ function isPastEvent(dateStr) {
   y = y.trim();
   if (y.length === 2) y = '20' + y;
   const evDate = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T23:59:59`);
-  return evDate < new Date();
+  return evDate < getBrasiliaDate();
 }
 
 function getEventTimestamp(e) {
@@ -1591,7 +1601,7 @@ function badgeEvento(tipo) {
 // ── PAINEL ────────────────────────────────────────────
 // ── Week helper functions ─────────────────────────────
 function getWeekBounds() {
-  const today = new Date();
+  const today = getBrasiliaDate();
   const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday, ..., 6 is Saturday
   
   // Start of the week (Sunday)
