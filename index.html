@@ -1244,6 +1244,113 @@
     border-color: var(--text);
     color: var(--text);
   }
+
+  /* ── ARTES SECTOR ── */
+  .artes-container {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .artes-add-box {
+    display: flex;
+    gap: 12px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .artes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .arte-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .arte-item:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+  }
+  .arte-item.completed {
+    opacity: 0.6;
+    border-color: var(--border);
+    transform: none;
+  }
+  .arte-item-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    cursor: pointer;
+  }
+  .arte-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    background: var(--bg3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: transparent;
+    font-size: 11px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .arte-item.completed .arte-checkbox {
+    border-color: var(--success);
+    background: var(--success);
+    color: #fff;
+  }
+  .arte-text {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    transition: all 0.2s;
+    word-break: break-word;
+  }
+  .arte-item.completed .arte-text {
+    text-decoration: line-through;
+    color: var(--muted);
+  }
+  .arte-btn-delete {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    transition: color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .arte-btn-delete:hover {
+    color: var(--accent);
+  }
+  .artes-status-bar {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+  }
+  .artes-status-bar span strong {
+    color: var(--text);
+  }
 </style>
 </head>
 <body>
@@ -1305,7 +1412,7 @@ let activeLtCover = '';
 let activeCtCover = '';
 
 let db, app;
-let eventos = [], lutadores = [], cts = [];
+let eventos = [], lutadores = [], cts = [], artes = [];
 let eventoEditId = null, lutadorEditId = null, ctEditId = null;
 
 // ── Upload state ────────────────────────────────────
@@ -1568,7 +1675,7 @@ function updateFirebaseBadge(ok) {
 
 // ── Load Data ─────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadEventos(), loadLutadores(), loadCTs()]);
+  await Promise.all([loadEventos(), loadLutadores(), loadCTs(), loadArtes()]);
   renderAll();
 }
 
@@ -1584,6 +1691,15 @@ async function loadCTs() {
   const snap = await getDocs(query(collection(db,'cts'), orderBy('nome','asc')));
   cts = snap.docs.map(d => ({id:d.id,...d.data()}));
 }
+async function loadArtes() {
+  try {
+    const snap = await getDocs(query(collection(db,'artes'), orderBy('criadoEm','asc')));
+    artes = snap.docs.map(d => ({id:d.id,...d.data()}));
+  } catch (err) {
+    console.error("Erro ao carregar artes:", err);
+    artes = [];
+  }
+}
 
 function renderAll() {
   renderPainel();
@@ -1591,7 +1707,51 @@ function renderAll() {
   renderLutadores();
   renderCTs();
   renderRanking();
+  renderArtes();
   updateDatalists();
+}
+
+window.renderArtes = function() {
+  const container = $('artes-lista-container');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  const total = artes.length;
+  const completed = artes.filter(a => a.concluido).length;
+  const pending = total - completed;
+  
+  const totalCountEl = $('artes-total-count');
+  const pendingCountEl = $('artes-pending-count');
+  const completedCountEl = $('artes-completed-count');
+  if (totalCountEl) totalCountEl.textContent = total;
+  if (pendingCountEl) pendingCountEl.textContent = pending;
+  if (completedCountEl) completedCountEl.textContent = completed;
+  
+  if (total === 0) {
+    container.innerHTML = `<div class="empty"><div class="empty-icon">🎨</div><div class="empty-text">Nenhuma arte cadastrada para esta semana</div></div>`;
+    return;
+  }
+  
+  // Sort: pendentes primeiro, depois por data de criação
+  const sortedArtes = [...artes].sort((a, b) => {
+    if (a.concluido !== b.concluido) {
+      return a.concluido ? 1 : -1;
+    }
+    return (a.criadoEm || 0) - (b.criadoEm || 0);
+  });
+  
+  sortedArtes.forEach(a => {
+    const item = el('div', `arte-item ${a.concluido ? 'completed' : ''}`);
+    item.innerHTML = `
+      <div class="arte-item-left" onclick="toggleArteStatus('${a.id}', ${a.concluido})">
+        <div class="arte-checkbox">${a.concluido ? '✓' : ''}</div>
+        <span class="arte-text">${a.nome || '-'}</span>
+      </div>
+      <button class="arte-btn-delete" onclick="deletarArte('${a.id}')" title="Excluir">🗑</button>
+    `;
+    container.appendChild(item);
+  });
 }
 
 // ── Helpers ───────────────────────────────────────────
@@ -2777,7 +2937,56 @@ window.deleteCT = async function(id) {
   await deleteDoc(doc(db,'cts',id));
   toast('CT excluído!');
   await loadCTs(); renderAll();
-}
+};
+
+// ── ARTES SECTOR ACTIONS ──────────────────────────────
+window.adicionarArte = async function() {
+  const nomeInput = $('arte-nova-nome');
+  const nome = nomeInput.value.trim();
+  if (!nome) {
+    toast('Digite um nome para a tarefa.', 'error');
+    return;
+  }
+  
+  try {
+    const data = {
+      nome: nome,
+      concluido: false,
+      criadoEm: Date.now()
+    };
+    await addDoc(collection(db, 'artes'), data);
+    toast('Arte adicionada!');
+    nomeInput.value = '';
+    await loadArtes();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao adicionar: ' + err.message, 'error');
+  }
+};
+
+window.toggleArteStatus = async function(id, currentStatus) {
+  try {
+    await updateDoc(doc(db, 'artes', id), {
+      concluido: !currentStatus
+    });
+    await loadArtes();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao atualizar status: ' + err.message, 'error');
+  }
+};
+
+window.deletarArte = async function(id) {
+  if (!confirm('Excluir esta tarefa de arte?')) return;
+  try {
+    await deleteDoc(doc(db, 'artes', id));
+    toast('Arte excluída.');
+    await loadArtes();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao excluir: ' + err.message, 'error');
+  }
+};
 
 // ── UPLOAD PLANILHA ──────────────────────────────────
 window.openUploadLutadores = function() {
@@ -3160,6 +3369,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Listener de teclado para adicionar nova arte com "Enter"
+  $('arte-nova-nome').addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      adicionarArte();
+    }
+  });
+
   // Drag and drop para upload
   const dropZone = $('upload-drop-zone');
   if (dropZone) {
@@ -3246,6 +3462,9 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <div class="nav-item" data-section="ranking" onclick="showSection('ranking')">
       <span class="icon">🏆</span><span>Ranking</span>
+    </div>
+    <div class="nav-item" data-section="artes" onclick="showSection('artes')">
+      <span class="icon">🎨</span><span>Artes</span>
     </div>
     <div class="nav-section">Cadastros</div>
     <div class="nav-item" data-section="lutadores" onclick="showSection('lutadores')">
@@ -3442,6 +3661,33 @@ document.addEventListener('DOMContentLoaded', () => {
         </thead>
         <tbody id="ranking-tbody"></tbody>
       </table>
+    </div>
+  </section>
+
+  <!-- ── ARTES DA SEMANA ── -->
+  <section id="artes" class="section">
+    <div class="page-header">
+      <div>
+        <div class="page-title">ARTES DA <span>SEMANA</span></div>
+        <div style="color:var(--muted);font-size:12px;margin-top:4px">Lista de tarefas para criação de artes dos eventos</div>
+      </div>
+    </div>
+    
+    <div class="artes-container">
+      <div class="artes-status-bar">
+        <span>Total: <strong id="artes-total-count">0</strong></span>
+        <span>Pendentes: <strong id="artes-pending-count" style="color:var(--gold)">0</strong></span>
+        <span>Concluídas: <strong id="artes-completed-count" style="color:var(--success)">0</strong></span>
+      </div>
+
+      <div class="artes-add-box">
+        <input type="text" class="search-box" id="arte-nova-nome" placeholder="Digite a nova arte (ex: Card Evento 42)..." style="max-width:100%">
+        <button class="btn btn-primary" onclick="adicionarArte()">+ Adicionar</button>
+      </div>
+
+      <div class="artes-list" id="artes-lista-container">
+        <!-- Preenchido dinamicamente -->
+      </div>
     </div>
   </section>
 
