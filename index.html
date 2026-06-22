@@ -1351,6 +1351,70 @@
   .artes-status-bar span strong {
     color: var(--text);
   }
+
+  /* ── GRUPOS DE ARTES ── */
+  .artes-grupo-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    margin-top: 18px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--accent);
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .artes-grupo-title {
+    font-family: var(--font-head);
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    color: var(--text);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .artes-grupo-badge {
+    background: var(--bg3);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .modal-grupo-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .modal-grupo-item:last-child {
+    border-bottom: none;
+  }
+  .modal-grupo-nome {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+  .modal-grupo-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .form-input-inline {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: var(--text);
+    font-size: 13px;
+    outline: none;
+  }
 </style>
 </head>
 <body>
@@ -1412,8 +1476,8 @@ let activeLtCover = '';
 let activeCtCover = '';
 
 let db, app;
-let eventos = [], lutadores = [], cts = [], artes = [];
-let eventoEditId = null, lutadorEditId = null, ctEditId = null;
+let eventos = [], lutadores = [], cts = [], artes = [], artesGrupos = [];
+let eventoEditId = null, lutadorEditId = null, ctEditId = null, editingGroupId = null;
 
 // ── Upload state ────────────────────────────────────
 let uploadData = null;
@@ -1675,7 +1739,7 @@ function updateFirebaseBadge(ok) {
 
 // ── Load Data ─────────────────────────────────────────
 async function loadAll() {
-  await Promise.all([loadEventos(), loadLutadores(), loadCTs(), loadArtes()]);
+  await Promise.all([loadEventos(), loadLutadores(), loadCTs(), loadArtes(), loadArtesGrupos()]);
   renderAll();
 }
 
@@ -1698,6 +1762,16 @@ async function loadArtes() {
   } catch (err) {
     console.error("Erro ao carregar artes:", err);
     artes = [];
+  }
+}
+async function loadArtesGrupos() {
+  try {
+    const snap = await getDocs(query(collection(db,'artes_grupos'), orderBy('criadoEm','asc')));
+    artesGrupos = snap.docs.map(d => ({id:d.id,...d.data()}));
+    popularGruposDropdown();
+  } catch (err) {
+    console.error("Erro ao carregar grupos de artes:", err);
+    artesGrupos = [];
   }
 }
 
@@ -1733,24 +1807,63 @@ window.renderArtes = function() {
     return;
   }
   
-  // Sort: pendentes primeiro, depois por data de criação
-  const sortedArtes = [...artes].sort((a, b) => {
-    if (a.concluido !== b.concluido) {
-      return a.concluido ? 1 : -1;
+  // Group tasks
+  const groupsToRender = [];
+  
+  // 1. Defined groups that have at least one task
+  artesGrupos.forEach(g => {
+    const gArtes = artes.filter(a => a.grupoId === g.id);
+    if (gArtes.length > 0) {
+      groupsToRender.push({
+        id: g.id,
+        nome: g.nome,
+        artes: gArtes
+      });
     }
-    return (a.criadoEm || 0) - (b.criadoEm || 0);
   });
   
-  sortedArtes.forEach(a => {
-    const item = el('div', `arte-item ${a.concluido ? 'completed' : ''}`);
-    item.innerHTML = `
-      <div class="arte-item-left" onclick="toggleArteStatus('${a.id}', ${a.concluido})">
-        <div class="arte-checkbox">${a.concluido ? '✓' : ''}</div>
-        <span class="arte-text">${a.nome || '-'}</span>
-      </div>
-      <button class="arte-btn-delete" onclick="deletarArte('${a.id}')" title="Excluir">🗑</button>
+  // 2. Geral group (uncategorized or group deleted)
+  const geralArtes = artes.filter(a => !a.grupoId || !artesGrupos.some(g => g.id === a.grupoId));
+  if (geralArtes.length > 0) {
+    groupsToRender.push({
+      id: 'geral',
+      nome: 'Geral',
+      artes: geralArtes
+    });
+  }
+  
+  // Render groups and their tasks
+  groupsToRender.forEach(group => {
+    // Header
+    const groupTotal = group.artes.length;
+    const groupCompleted = group.artes.filter(a => a.concluido).length;
+    
+    const header = el('div', 'artes-grupo-header');
+    header.innerHTML = `
+      <div class="artes-grupo-title">📁 ${group.nome}</div>
+      <span class="artes-grupo-badge">${groupCompleted}/${groupTotal} feito</span>
     `;
-    container.appendChild(item);
+    container.appendChild(header);
+    
+    // Sort tasks in group: pending first, then by creation date
+    const sorted = [...group.artes].sort((a, b) => {
+      if (a.concluido !== b.concluido) {
+        return a.concluido ? 1 : -1;
+      }
+      return (a.criadoEm || 0) - (b.criadoEm || 0);
+    });
+    
+    sorted.forEach(a => {
+      const item = el('div', `arte-item ${a.concluido ? 'completed' : ''}`);
+      item.innerHTML = `
+        <div class="arte-item-left" onclick="toggleArteStatus('${a.id}', ${a.concluido})">
+          <div class="arte-checkbox">${a.concluido ? '✓' : ''}</div>
+          <span class="arte-text">${a.nome || '-'}</span>
+        </div>
+        <button class="arte-btn-delete" onclick="deletarArte('${a.id}')" title="Excluir">🗑</button>
+      `;
+      container.appendChild(item);
+    });
   });
 }
 
@@ -2948,15 +3061,20 @@ window.adicionarArte = async function() {
     return;
   }
   
+  const grupoSelect = $('arte-nova-grupo');
+  const grupoId = grupoSelect ? grupoSelect.value : '';
+  
   try {
     const data = {
       nome: nome,
       concluido: false,
+      grupoId: grupoId,
       criadoEm: Date.now()
     };
     await addDoc(collection(db, 'artes'), data);
     toast('Arte adicionada!');
     nomeInput.value = '';
+    if (grupoSelect) grupoSelect.value = '';
     await loadArtes();
     renderAll();
   } catch (err) {
@@ -2987,6 +3105,124 @@ window.deletarArte = async function(id) {
     toast('Erro ao excluir: ' + err.message, 'error');
   }
 };
+
+// ── GRUPOS DE ARTES ACTIONS ───────────────────────────
+window.abrirGerenciarGrupos = function() {
+  editingGroupId = null;
+  const input = $('grupo-novo-nome');
+  if (input) input.value = '';
+  $('modal-artes-grupos').style.display = 'flex';
+  renderGruposLista();
+};
+
+window.renderGruposLista = function() {
+  const container = $('modal-grupos-lista');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  if (artesGrupos.length === 0) {
+    container.innerHTML = `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">Nenhum grupo cadastrado</div>`;
+    return;
+  }
+  
+  artesGrupos.forEach(g => {
+    const item = el('div', 'modal-grupo-item');
+    if (g.id === editingGroupId) {
+      item.innerHTML = `
+        <input type="text" class="form-input-inline" id="grupo-edit-nome-${g.id}" value="${g.nome || ''}">
+        <div class="modal-grupo-actions">
+          <button class="btn btn-primary btn-sm" onclick="salvarEdicaoGrupo('${g.id}')" style="padding: 2px 8px; font-size: 11px">Salvar</button>
+          <button class="btn btn-ghost btn-sm" onclick="cancelarEdicaoGrupo()" style="padding: 2px 8px; font-size: 11px">Cancelar</button>
+        </div>
+      `;
+    } else {
+      item.innerHTML = `
+        <span class="modal-grupo-nome">${g.nome || ''}</span>
+        <div class="modal-grupo-actions">
+          <button class="btn btn-ghost btn-sm" onclick="habilitarEdicaoGrupo('${g.id}')" title="Editar">✏️</button>
+          <button class="btn btn-ghost btn-sm" onclick="deletarGrupo('${g.id}')" title="Excluir" style="color:var(--accent)">🗑</button>
+        </div>
+      `;
+    }
+    container.appendChild(item);
+  });
+};
+
+window.habilitarEdicaoGrupo = function(id) {
+  editingGroupId = id;
+  renderGruposLista();
+};
+
+window.cancelarEdicaoGrupo = function() {
+  editingGroupId = null;
+  renderGruposLista();
+};
+
+window.salvarEdicaoGrupo = async function(id) {
+  const input = $(`grupo-edit-nome-${id}`);
+  if (!input) return;
+  const novoNome = input.value.trim();
+  if (!novoNome) {
+    toast('Nome do grupo não pode ser vazio', 'error');
+    return;
+  }
+  try {
+    await updateDoc(doc(db, 'artes_grupos', id), { nome: novoNome });
+    toast('Grupo atualizado!');
+    editingGroupId = null;
+    await loadArtesGrupos();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao atualizar: ' + err.message, 'error');
+  }
+};
+
+window.adicionarGrupo = async function() {
+  const input = $('grupo-novo-nome');
+  if (!input) return;
+  const nome = input.value.trim();
+  if (!nome) {
+    toast('Digite o nome do grupo', 'error');
+    return;
+  }
+  try {
+    await addDoc(collection(db, 'artes_grupos'), {
+      nome: nome,
+      criadoEm: Date.now()
+    });
+    toast('Grupo criado!');
+    input.value = '';
+    await loadArtesGrupos();
+    renderGruposLista();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao adicionar grupo: ' + err.message, 'error');
+  }
+};
+
+window.deletarGrupo = async function(id) {
+  if (!confirm('Excluir este grupo de artes? As tarefas dele serão movidas para "Geral".')) return;
+  try {
+    await deleteDoc(doc(db, 'artes_grupos', id));
+    toast('Grupo excluído!');
+    await loadArtesGrupos();
+    renderGruposLista();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao excluir: ' + err.message, 'error');
+  }
+};
+
+function popularGruposDropdown() {
+  const select = $('arte-nova-grupo');
+  if (!select) return;
+  select.innerHTML = '<option value="">Geral</option>';
+  artesGrupos.forEach(g => {
+    const opt = el('option', '', g.nome);
+    opt.value = g.id;
+    select.appendChild(opt);
+  });
+}
 
 // ── UPLOAD PLANILHA ──────────────────────────────────
 window.openUploadLutadores = function() {
@@ -3376,6 +3612,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Listener de teclado para adicionar novo grupo com "Enter"
+  const inputGrupo = $('grupo-novo-nome');
+  if (inputGrupo) {
+    inputGrupo.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        adicionarGrupo();
+      }
+    });
+  }
+
   // Drag and drop para upload
   const dropZone = $('upload-drop-zone');
   if (dropZone) {
@@ -3680,9 +3926,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <span>Concluídas: <strong id="artes-completed-count" style="color:var(--success)">0</strong></span>
       </div>
 
-      <div class="artes-add-box">
-        <input type="text" class="search-box" id="arte-nova-nome" placeholder="Digite a nova arte (ex: Card Evento 42)..." style="max-width:100%">
-        <button class="btn btn-primary" onclick="adicionarArte()">+ Adicionar</button>
+      <div class="artes-add-box" style="flex-wrap:wrap">
+        <input type="text" class="search-box" id="arte-nova-nome" placeholder="Digite a nova arte (ex: Card Evento 42)..." style="flex:1; min-width:200px; max-width:100%">
+        <div style="display:flex; gap:6px; align-items:center; flex:1; min-width:200px">
+          <select class="form-select" id="arte-nova-grupo" style="padding: 9px 12px; height: 38px;"></select>
+          <button type="button" class="btn btn-ghost" onclick="abrirGerenciarGrupos()" title="Gerenciar Grupos" style="padding: 9px 12px; height: 38px;">⚙️</button>
+        </div>
+        <button class="btn btn-primary" onclick="adicionarArte()" style="height: 38px;">+ Adicionar</button>
       </div>
 
       <div class="artes-list" id="artes-lista-container">
@@ -3980,6 +4230,35 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-upload')">Cancelar</button>
       <button class="btn btn-primary" id="upload-btn-import" onclick="importarPlanilha()" disabled style="opacity:0.5;cursor:not-allowed">📤 Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- GERENCIAR GRUPOS DE ARTES -->
+<div id="modal-artes-grupos" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <div class="modal-title">GERENCIAR <span>ASSUNTOS / GRUPOS</span></div>
+      <button class="modal-close" onclick="closeModal('modal-artes-grupos')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-section">
+        <div class="form-section-title">Criar Novo Assunto / Grupo</div>
+        <div style="display:flex;gap:10px">
+          <input type="text" class="form-input" id="grupo-novo-nome" placeholder="Nome do grupo (ex: Instagram)...">
+          <button class="btn btn-primary" onclick="adicionarGrupo()">+ Criar</button>
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <div class="form-section-title">Assuntos / Grupos Cadastrados</div>
+        <div id="modal-grupos-lista" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;max-height:220px;overflow-y:auto">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-artes-grupos')">Fechar</button>
     </div>
   </div>
 </div>
