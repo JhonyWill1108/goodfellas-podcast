@@ -1477,7 +1477,7 @@ let activeCtCover = '';
 
 let db, app;
 let eventos = [], lutadores = [], cts = [], artes = [], artesGrupos = [];
-let eventoEditId = null, lutadorEditId = null, ctEditId = null, editingGroupId = null;
+let eventoEditId = null, lutadorEditId = null, ctEditId = null, editingGroupId = null, editingArteId = null;
 
 // ── Upload state ────────────────────────────────────
 let uploadData = null;
@@ -1855,13 +1855,36 @@ window.renderArtes = function() {
     
     sorted.forEach(a => {
       const item = el('div', `arte-item ${a.concluido ? 'completed' : ''}`);
-      item.innerHTML = `
-        <div class="arte-item-left" onclick="toggleArteStatus('${a.id}', ${a.concluido})">
-          <div class="arte-checkbox">${a.concluido ? '✓' : ''}</div>
-          <span class="arte-text">${a.nome || '-'}</span>
-        </div>
-        <button class="arte-btn-delete" onclick="deletarArte('${a.id}')" title="Excluir">🗑</button>
-      `;
+      if (a.id === editingArteId) {
+        let optionsHTML = '<option value="">Geral</option>';
+        artesGrupos.forEach(g => {
+          optionsHTML += `<option value="${g.id}" ${g.id === a.grupoId ? 'selected' : ''}>${g.nome}</option>`;
+        });
+        
+        item.innerHTML = `
+          <div class="arte-item-edit-mode" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%">
+            <input type="text" class="form-input-inline" id="arte-edit-nome-${a.id}" value="${a.nome || ''}" style="flex:2;min-width:140px">
+            <select class="form-input-inline" id="arte-edit-grupo-${a.id}" style="flex:1;min-width:100px;padding:4px;height:26px">
+              ${optionsHTML}
+            </select>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-primary btn-sm" onclick="salvarEdicaoArte('${a.id}')" style="padding:2px 8px;font-size:11px">Salvar</button>
+              <button class="btn btn-ghost btn-sm" onclick="cancelarEdicaoArte()" style="padding:2px 8px;font-size:11px">Cancelar</button>
+            </div>
+          </div>
+        `;
+      } else {
+        item.innerHTML = `
+          <div class="arte-item-left" onclick="toggleArteStatus('${a.id}', ${a.concluido})">
+            <div class="arte-checkbox">${a.concluido ? '✓' : ''}</div>
+            <span class="arte-text">${a.nome || '-'}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button class="arte-btn-delete" onclick="habilitarEdicaoArte('${a.id}')" title="Editar" style="font-size:14px">✏️</button>
+            <button class="arte-btn-delete" onclick="deletarArte('${a.id}')" title="Excluir">🗑</button>
+          </div>
+        `;
+      }
       container.appendChild(item);
     });
   });
@@ -3103,6 +3126,40 @@ window.deletarArte = async function(id) {
     renderAll();
   } catch (err) {
     toast('Erro ao excluir: ' + err.message, 'error');
+  }
+};
+
+window.habilitarEdicaoArte = function(id) {
+  editingArteId = id;
+  renderArtes();
+};
+
+window.cancelarEdicaoArte = function() {
+  editingArteId = null;
+  renderArtes();
+};
+
+window.salvarEdicaoArte = async function(id) {
+  const input = $(`arte-edit-nome-${id}`);
+  const select = $(`arte-edit-grupo-${id}`);
+  if (!input || !select) return;
+  const novoNome = input.value.trim();
+  const novoGrupoId = select.value;
+  if (!novoNome) {
+    toast('O nome da tarefa não pode ser vazio.', 'error');
+    return;
+  }
+  try {
+    await updateDoc(doc(db, 'artes', id), {
+      nome: novoNome,
+      grupoId: novoGrupoId
+    });
+    toast('Tarefa atualizada!');
+    editingArteId = null;
+    await loadArtes();
+    renderAll();
+  } catch (err) {
+    toast('Erro ao atualizar tarefa: ' + err.message, 'error');
   }
 };
 
