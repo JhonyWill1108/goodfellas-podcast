@@ -1857,6 +1857,48 @@ function renderPainel() {
   }
 }
 
+window.copiarAgendaSemana = function() {
+  const semanaEventos = eventos.filter(e => isEventInCurrentWeek(e.data));
+  if (!semanaEventos.length) {
+    toast('Nenhum evento agendado para esta semana!', 'error');
+    return;
+  }
+  
+  // Ordenar cronologicamente
+  semanaEventos.sort((a, b) => getEventTimestamp(a) - getEventTimestamp(b));
+  
+  let text = 'Links - Agenda da semana\n\n';
+  
+  semanaEventos.forEach((e, idx) => {
+    let nameStr = '';
+    if (e.tipo === 'LUTA') {
+      nameStr = `${e.nomeC1 || '-'} vs ${e.nomeC2 || '-'}`;
+    } else {
+      if (e.nomeC1 && e.nomeC2) {
+        nameStr = `${e.nomeC1} e ${e.nomeC2}`;
+      } else {
+        nameStr = e.nomeC1 || e.nomeC2 || '-';
+      }
+    }
+    
+    text += `${e.data || '-'} - ${e.horario || '-'} - ${nameStr}\n`;
+    text += `${e.link || 'Sem link cadastrado'}`;
+    
+    if (idx < semanaEventos.length - 1) {
+      text += '\n\n';
+    }
+  });
+  
+  navigator.clipboard.writeText(text)
+    .then(() => {
+      toast('Agenda copiada para a área de transferência!');
+    })
+    .catch(err => {
+      console.error('Erro ao copiar:', err);
+      toast('Erro ao copiar agenda.', 'error');
+    });
+};
+
 // ── EVENTOS ───────────────────────────────────────────
 function renderEventos() {
   const tbody = $('eventos-tbody');
@@ -3273,8 +3315,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <!-- ── EVENTOS DA SEMANA ── -->
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-top:20px">
-      <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--font-head);font-size:18px;letter-spacing:1px">
-        EVENTOS DA <span style="color:var(--accent)">SEMANA ATUAL</span>
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-family:var(--font-head);font-size:18px;letter-spacing:1px;display:flex;justify-content:space-between;align-items:center">
+        <span>EVENTOS DA <span style="color:var(--accent)">SEMANA ATUAL</span></span>
+        <button class="btn btn-ghost btn-sm" onclick="copiarAgendaSemana()" style="font-family:var(--font-body);text-transform:none;letter-spacing:0">📋 Copiar Agenda</button>
       </div>
       <div class="table-wrap" style="border:none">
         <table>
