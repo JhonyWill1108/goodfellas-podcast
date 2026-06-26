@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>FellasCast — Controle de Eventos BJJ</title>
+<link rel="icon" href="goodfellas-logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" onload="if (window.initGoogleAuth) window.initGoogleAuth()" async defer></script>
@@ -1240,9 +1241,14 @@
     font-weight: 600;
     transition: all 0.2s;
   }
-  .gdrive-btn:hover {
-    border-color: var(--text);
-    color: var(--text);
+  .address-link {
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .address-link:hover {
+    text-decoration: underline;
+    opacity: 0.8;
   }
 
   /* ── ARTES SECTOR ── */
@@ -2096,7 +2102,7 @@ function renderPainel() {
           </div>
           <div class="highlight-detail-row" style="flex-direction:column;align-items:flex-start;gap:4px">
             <span class="highlight-detail-label">Endereço da Luta</span>
-            <span class="highlight-detail-value" style="word-break:break-word">${addressText || '-'}</span>
+            <span class="highlight-detail-value" style="word-break:break-word">${addressText ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addressText)}" target="_blank" class="address-link">📍 ${addressText}</a>` : '-'}</span>
           </div>
           ${!addressText ? '<div class="highlight-address-alert">⚠️ Endereço a definir (live de terça)</div>' : ''}
         </div>
@@ -2337,7 +2343,7 @@ function renderCTs() {
   const slice = filtered.slice((ctPage - 1) * PER_PAGE, ctPage * PER_PAGE);
 
   if (!slice.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty"><div class="empty-icon">🏟</div><div class="empty-text">Nenhum CT encontrado</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-icon">🏟</div><div class="empty-text">Nenhum CT encontrado</div></div></td></tr>`;
     return;
   }
 
@@ -2352,8 +2358,33 @@ function renderCTs() {
         </div>
       </td>
       <td style="font-size:12px;color:var(--muted)">${c.dono||'-'}</td>
-      <td style="font-size:12px;color:var(--muted);max-width:300px">${c.endereco||'-'}</td>
-      <td style="font-size:12px;">${renderWhatsApp(c.telefone)}</td>
+      <td style="font-size:12px;color:var(--muted);max-width:300px">${c.endereco ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.endereco)}" target="_blank" class="address-link">📍 ${c.endereco}</a>` : '-'}</td>
+      <td style="font-size:12px; min-width:180px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:9px; padding:1px 4px; background:var(--accent); border-radius:3px; color:#fff; font-weight:600;">DONO</span>
+            ${renderWhatsApp(c.telefone)}
+          </div>
+          ${c.reserva1Tel ? `
+            <div style="display:flex; align-items:center; gap:4px; font-size:11px;">
+              <span style="font-size:9px; padding:1px 4px; background:var(--bg3); border:1px solid var(--border); border-radius:3px; color:var(--muted); font-weight:600; text-transform:uppercase;">${c.reserva1Nome ? c.reserva1Nome.slice(0, 10) : 'RES 1'}</span>
+              ${renderWhatsApp(c.reserva1Tel)}
+            </div>
+          ` : ''}
+          ${c.reserva2Tel ? `
+            <div style="display:flex; align-items:center; gap:4px; font-size:11px;">
+              <span style="font-size:9px; padding:1px 4px; background:var(--bg3); border:1px solid var(--border); border-radius:3px; color:var(--muted); font-weight:600; text-transform:uppercase;">${c.reserva2Nome ? c.reserva2Nome.slice(0, 10) : 'RES 2'}</span>
+              ${renderWhatsApp(c.reserva2Tel)}
+            </div>
+          ` : ''}
+          ${c.reserva3Tel ? `
+            <div style="display:flex; align-items:center; gap:4px; font-size:11px;">
+              <span style="font-size:9px; padding:1px 4px; background:var(--bg3); border:1px solid var(--border); border-radius:3px; color:var(--muted); font-weight:600; text-transform:uppercase;">${c.reserva3Nome ? c.reserva3Nome.slice(0, 10) : 'RES 3'}</span>
+              ${renderWhatsApp(c.reserva3Tel)}
+            </div>
+          ` : ''}
+        </div>
+      </td>
       <td>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="openCT('${c.id}')">✏️</button>
@@ -3028,6 +3059,12 @@ window.openCT = function(id=null) {
   $('ct-dono').value    = c.dono    || '';
   $('ct-endereco').value= c.endereco|| '';
   $('ct-telefone').value= c.telefone|| '';
+  $('ct-reserva1-nome').value = c.reserva1Nome || '';
+  $('ct-reserva1-tel').value  = c.reserva1Tel || '';
+  $('ct-reserva2-nome').value = c.reserva2Nome || '';
+  $('ct-reserva2-tel').value  = c.reserva2Tel || '';
+  $('ct-reserva3-nome').value = c.reserva3Nome || '';
+  $('ct-reserva3-tel').value  = c.reserva3Tel || '';
   
   currentCtFotos = ['', '', ''];
   if (c.fotos && Array.isArray(c.fotos)) {
@@ -3047,12 +3084,18 @@ window.openCT = function(id=null) {
 window.saveCT = async function() {
   const coverUrl = activeCtCover || currentCtFotos.find(f => f) || '';
   const data = {
-    nome:     $('ct-nome').value.trim(),
-    dono:     $('ct-dono').value.trim(),
-    endereco: $('ct-endereco').value.trim(),
-    telefone: $('ct-telefone').value.trim(),
-    foto:     coverUrl,
-    fotos:    currentCtFotos
+    nome:         $('ct-nome').value.trim(),
+    dono:         $('ct-dono').value.trim(),
+    endereco:     $('ct-endereco').value.trim(),
+    telefone:     $('ct-telefone').value.trim(),
+    reserva1Nome: $('ct-reserva1-nome').value.trim(),
+    reserva1Tel:  $('ct-reserva1-tel').value.trim(),
+    reserva2Nome: $('ct-reserva2-nome').value.trim(),
+    reserva2Tel:  $('ct-reserva2-tel').value.trim(),
+    reserva3Nome: $('ct-reserva3-nome').value.trim(),
+    reserva3Tel:  $('ct-reserva3-tel').value.trim(),
+    foto:         coverUrl,
+    fotos:        currentCtFotos
   };
   if (!data.nome) { toast('Nome obrigatório','error'); return; }
   try {
@@ -3114,6 +3157,32 @@ window.toggleArteStatus = async function(id, currentStatus) {
     renderAll();
   } catch (err) {
     toast('Erro ao atualizar status: ' + err.message, 'error');
+  }
+};
+
+window.desmarcarTodasArtes = async function() {
+  const completedArtes = artes.filter(a => a.concluido);
+  if (completedArtes.length === 0) {
+    toast('Nenhuma arte está concluída!');
+    return;
+  }
+  
+  if (!confirm(`Deseja desmarcar todas as ${completedArtes.length} artes concluídas?`)) {
+    return;
+  }
+  
+  try {
+    const batch = writeBatch(db);
+    completedArtes.forEach(a => {
+      batch.update(doc(db, 'artes', a.id), { concluido: false });
+    });
+    await batch.commit();
+    toast('Todas as artes foram desmarcadas!');
+    await loadArtes();
+    renderAll();
+  } catch (err) {
+    console.error('Erro ao desmarcar artes:', err);
+    toast('Erro ao desmarcar artes: ' + err.message, 'error');
   }
 };
 
@@ -3322,7 +3391,9 @@ window.openUploadCTs = function() {
     <strong>CTs</strong><br>
     Coluna A: <strong>Nome do CT</strong> (obrigatório)<br>
     Coluna B: Responsável<br>
-    Coluna C: Endereço<br><br>
+    Coluna C: Endereço<br>
+    Coluna D: Contato<br>
+    Colunas E-J: Contatos de Reserva (Nome/Contato)<br><br>
     <button class="btn btn-sm btn-ghost" onclick="downloadTemplateCTs()" style="margin-top:8px">📥 Baixar template</button>
   `;
   
@@ -3346,12 +3417,12 @@ window.downloadTemplateLutadores = function() {
 window.downloadTemplateCTs = function() {
   const workbook = XLSX.utils.book_new();
   const data = [
-    ['Nome do CT', 'Responsável', 'Endereço'],
-    ['CT Atos', 'João Silva', 'Rua A, 123 - São Paulo, SP'],
-    ['CT Alliance', 'Maria Santos', 'Av. B, 456 - Rio de Janeiro, RJ'],
+    ['Nome do CT', 'Responsável', 'Endereço', 'Contato', 'Reserva 1 Nome', 'Reserva 1 Contato', 'Reserva 2 Nome', 'Reserva 2 Contato', 'Reserva 3 Nome', 'Reserva 3 Contato'],
+    ['CT Atos', 'João Silva', 'Rua A, 123 - São Paulo, SP', '11999999999', 'Instrutor Carlos', '11888888888', 'Secretária Ana', '11777777777', '', ''],
+    ['CT Alliance', 'Maria Santos', 'Av. B, 456 - Rio de Janeiro, RJ', '21999999999', 'Instrutor Bruno', '21888888888', '', '', '', ''],
   ];
   const sheet = XLSX.utils.aoa_to_sheet(data);
-  sheet['!cols'] = [{wch: 25}, {wch: 20}, {wch: 40}];
+  sheet['!cols'] = [{wch: 25}, {wch: 20}, {wch: 40}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}, {wch: 20}, {wch: 15}];
   XLSX.utils.book_append_sheet(workbook, sheet, 'CTs');
   XLSX.writeFile(workbook, 'template_cts.xlsx');
   toast('Template baixado!');
@@ -3432,7 +3503,7 @@ function previewUpload(rows, tipo) {
       tr.appendChild(th);
     });
   } else {
-    ['Nome do CT', 'Responsável', 'Endereço'].forEach(h => {
+    ['Nome do CT', 'Responsável', 'Endereço', 'Contato', 'Reserva 1 Nome', 'Reserva 1 Contato', 'Reserva 2 Nome', 'Reserva 2 Contato', 'Reserva 3 Nome', 'Reserva 3 Contato'].forEach(h => {
       const th = el('th', '', h);
       th.style.padding = '8px 12px';
       th.style.textAlign = 'left';
@@ -3460,7 +3531,18 @@ function previewUpload(rows, tipo) {
         tr.appendChild(td);
       });
     } else {
-      [row['Nome do CT'] || '', row.Responsável || '', row.Endereço || ''].forEach(cell => {
+      [
+        row['Nome do CT'] || '',
+        row.Responsável || '',
+        row.Endereço || '',
+        row.Contato || '',
+        row['Reserva 1 Nome'] || '',
+        row['Reserva 1 Contato'] || '',
+        row['Reserva 2 Nome'] || '',
+        row['Reserva 2 Contato'] || '',
+        row['Reserva 3 Nome'] || '',
+        row['Reserva 3 Contato'] || ''
+      ].forEach(cell => {
         const td = el('td', '', cell);
         td.style.padding = '8px 12px';
         td.style.color = 'var(--text)';
@@ -3520,6 +3602,13 @@ window.importarPlanilha = async function() {
             nome: (row['Nome do CT'] || '').trim(),
             dono: (row.Responsável || '').trim(),
             endereco: (row.Endereço || '').trim(),
+            telefone: row.Contato ? String(row.Contato).trim() : '',
+            reserva1Nome: row['Reserva 1 Nome'] ? String(row['Reserva 1 Nome']).trim() : '',
+            reserva1Tel: row['Reserva 1 Contato'] ? String(row['Reserva 1 Contato']).trim() : '',
+            reserva2Nome: row['Reserva 2 Nome'] ? String(row['Reserva 2 Nome']).trim() : '',
+            reserva2Tel: row['Reserva 2 Contato'] ? String(row['Reserva 2 Contato']).trim() : '',
+            reserva3Nome: row['Reserva 3 Nome'] ? String(row['Reserva 3 Nome']).trim() : '',
+            reserva3Tel: row['Reserva 3 Contato'] ? String(row['Reserva 3 Contato']).trim() : '',
           };
           batch.set(doc(collection(db, colName)), data);
         }
@@ -3586,7 +3675,14 @@ window.exportarExcel = function(tipo) {
     dataToExport = cts.map(c => ({
       'Nome do CT': c.nome || '',
       'Responsável': c.dono || '',
-      'Endereço': c.endereco || ''
+      'Endereço': c.endereco || '',
+      'Contato': c.telefone || '',
+      'Reserva 1 Nome': c.reserva1Nome || '',
+      'Reserva 1 Contato': c.reserva1Tel || '',
+      'Reserva 2 Nome': c.reserva2Nome || '',
+      'Reserva 2 Contato': c.reserva2Tel || '',
+      'Reserva 3 Nome': c.reserva3Nome || '',
+      'Reserva 3 Contato': c.reserva3Tel || ''
     }));
     filename = 'cts.xlsx';
   }
@@ -3648,7 +3744,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ctSearch = e.target.value; ctPage = 1; renderCTs();
   });
 
-  $('ct-telefone').addEventListener('input', e => {
+  const formatPhoneField = e => {
     let val = e.target.value.replace(/\D/g, '');
     if (val.length > 11) val = val.slice(0, 11);
     if (val.length > 6) {
@@ -3660,7 +3756,12 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       e.target.value = '';
     }
-  });
+  };
+
+  $('ct-telefone').addEventListener('input', formatPhoneField);
+  $('ct-reserva1-tel').addEventListener('input', formatPhoneField);
+  $('ct-reserva2-tel').addEventListener('input', formatPhoneField);
+  $('ct-reserva3-tel').addEventListener('input', formatPhoneField);
 
   // Listener de teclado para adicionar nova arte com "Enter"
   $('arte-nova-nome').addEventListener('keydown', e => {
@@ -3974,6 +4075,9 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="page-title">ARTES DA <span>SEMANA</span></div>
         <div style="color:var(--muted);font-size:12px;margin-top:4px">Lista de tarefas para criação de artes dos eventos</div>
       </div>
+      <div class="page-header-actions">
+        <button class="btn btn-ghost" onclick="desmarcarTodasArtes()" style="height:38px; border-color:var(--gold); color:var(--gold);">🔄 Desmarcar Todas</button>
+      </div>
     </div>
     
     <div class="artes-container">
@@ -4098,7 +4202,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <div class="form-group">
             <label class="form-label">Endereço <span class="auto-tag">✦ auto</span></label>
-            <input type="text" class="form-input" id="ev-endereco" readonly>
+            <input type="text" class="form-input" id="ev-endereco" readonly style="cursor:pointer;" onclick="if(this.value) window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.value), '_blank')" title="Clique para abrir no Google Maps">
           </div>
           <div class="form-group form-full">
             <label class="form-label">Link da Live</label>
@@ -4210,8 +4314,46 @@ document.addEventListener('DOMContentLoaded', () => {
           <input type="text" class="form-input" id="ct-endereco" placeholder="Rua, número, bairro, cidade">
         </div>
         <div class="form-group">
-          <label class="form-label">WhatsApp / Celular de Contato</label>
+          <label class="form-label">WhatsApp / Celular do Dono</label>
           <input type="text" class="form-input" id="ct-telefone" placeholder="(XX) XXXXX-XXXX">
+        </div>
+        
+        <!-- Contatos de Reserva -->
+        <div style="border-top:1px solid var(--border); padding-top:16px; margin-top:8px;">
+          <div style="font-weight:600; font-size:11px; color:var(--gold); margin-bottom:12px; letter-spacing:1px; text-transform:uppercase;">Contatos de Reserva (Até 3)</div>
+          
+          <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 1 - Nome</label>
+              <input type="text" class="form-input" id="ct-reserva1-nome" placeholder="Ex: Instrutor Carlos" style="height:32px; font-size:12px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 1 - WhatsApp</label>
+              <input type="text" class="form-input" id="ct-reserva1-tel" placeholder="(XX) XXXXX-XXXX" style="height:32px; font-size:12px;">
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 2 - Nome</label>
+              <input type="text" class="form-input" id="ct-reserva2-nome" placeholder="Ex: Secretária Ana" style="height:32px; font-size:12px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 2 - WhatsApp</label>
+              <input type="text" class="form-input" id="ct-reserva2-tel" placeholder="(XX) XXXXX-XXXX" style="height:32px; font-size:12px;">
+            </div>
+          </div>
+
+          <div class="form-grid" style="grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 3 - Nome</label>
+              <input type="text" class="form-input" id="ct-reserva3-nome" placeholder="Ex: Professor Bruno" style="height:32px; font-size:12px;">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size:10px;">Reserva 3 - WhatsApp</label>
+              <input type="text" class="form-input" id="ct-reserva3-tel" placeholder="(XX) XXXXX-XXXX" style="height:32px; font-size:12px;">
+            </div>
+          </div>
         </div>
         <div class="form-group">
           <div style="display:flex; justify-content:space-between; align-items:center;">
