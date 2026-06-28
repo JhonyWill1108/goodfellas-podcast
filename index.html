@@ -1444,15 +1444,15 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, o
 // ══════════════════════════════════════════════════════
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCDQDU4TZGFAneHSDRWL117_aFpwuhIdQE",
-  authDomain: "goodfellas-podcast.firebaseapp.com",
-  projectId: "goodfellas-podcast",
-  storageBucket: "goodfellas-podcast.firebasestorage.app",
+  authDomain: "fellascast.firebaseapp.com",
+  projectId: "fellascast",
+  storageBucket: "fellascast.firebasestorage.app",
   messagingSenderId: "214101637144",
   appId: "1:214101637144:web:e0fd3b46b158e8fa8f6b6d"
 };
 
 let FIREBASE_CONFIG = DEFAULT_FIREBASE_CONFIG;
-const storedConfig = localStorage.getItem('goodfellas_podcast_firebase_config');
+const storedConfig = localStorage.getItem('fellascast_firebase_config');
 if (storedConfig) {
   try {
     FIREBASE_CONFIG = JSON.parse(storedConfig);
