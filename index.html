@@ -1431,7 +1431,7 @@
 </div>
 
 <!-- SHEETJS LIBRARY FOR EXCEL/CSV -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <!-- FIREBASE SDK -->
 <script type="module">
@@ -3400,7 +3400,38 @@ window.openUploadCTs = function() {
   $('modal-upload').style.display = 'flex';
 }
 
-window.downloadTemplateLutadores = function() {
+async function ensureXLSXLoaded() {
+  if (window.XLSX) return true;
+  const urls = [
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  for (const url of urls) {
+    try {
+      await new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = url;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+      if (window.XLSX) {
+        console.log(`SheetJS carregado com sucesso via: ${url}`);
+        return true;
+      }
+    } catch (e) {
+      console.warn(`Falha ao carregar SheetJS de: ${url}`);
+    }
+  }
+  return false;
+}
+
+window.downloadTemplateLutadores = async function() {
+  if (!await ensureXLSXLoaded()) {
+    toast('Erro: Biblioteca de planilhas não pôde ser carregada.', 'error');
+    return;
+  }
   const workbook = XLSX.utils.book_new();
   const data = [
     ['Nome', 'Instagram', 'Faixa', 'Grau', 'Equipe', 'Idade', 'Peso', 'Altura'],
@@ -3414,7 +3445,11 @@ window.downloadTemplateLutadores = function() {
   toast('Template baixado!');
 }
 
-window.downloadTemplateCTs = function() {
+window.downloadTemplateCTs = async function() {
+  if (!await ensureXLSXLoaded()) {
+    toast('Erro: Biblioteca de planilhas não pôde ser carregada.', 'error');
+    return;
+  }
   const workbook = XLSX.utils.book_new();
   const data = [
     ['Nome do CT', 'Responsável', 'Endereço', 'Contato', 'Reserva 1 Nome', 'Reserva 1 Contato', 'Reserva 2 Nome', 'Reserva 2 Contato', 'Reserva 3 Nome', 'Reserva 3 Contato'],
@@ -3428,9 +3463,14 @@ window.downloadTemplateCTs = function() {
   toast('Template baixado!');
 }
 
-window.handleFileUpload = function(e) {
+window.handleFileUpload = async function(e) {
   const file = e.target.files[0];
   if (!file) return;
+
+  if (!await ensureXLSXLoaded()) {
+    toast('Erro: Biblioteca de planilhas não pôde ser carregada.', 'error');
+    return;
+  }
 
   const reader = new FileReader();
   reader.onload = function(evt) {
@@ -3641,7 +3681,11 @@ window.importarPlanilha = async function() {
 }
 
 // ── Exportar Planilha Excel ───────────────────────────
-window.exportarExcel = function(tipo) {
+window.exportarExcel = async function(tipo) {
+  if (!await ensureXLSXLoaded()) {
+    toast('Erro: Biblioteca de planilhas não pôde ser carregada.', 'error');
+    return;
+  }
   let dataToExport = [];
   let filename = '';
   
