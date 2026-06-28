@@ -251,9 +251,9 @@ A implementação demonstra:
 
 Toda funcionalidade foi implementada, testada e documentada.
 
-O FellasCast agora suporta importação em lote de lutadores e CTs via planilha!
+O Goodfellas Podcast agora suporta importação em lote de lutadores e CTs via planilha!
 
 ---
 
-**FellasCast v2.0.0** 🎉
+**Goodfellas Podcast v2.0.0** 🎉
 Controle de Eventos BJJ com Upload de Planilha

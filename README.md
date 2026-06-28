@@ -1,4 +1,4 @@
-# 🎙️ FellasCast — Controle de Eventos BJJ
+# 🎙️ Goodfellas Podcast — Controle de Eventos BJJ
 
 Um aplicativo web moderno para gerenciar eventos, lutadores e centros de treinamento (CTs) de BJJ.
 
@@ -166,4 +166,4 @@ Todos os direitos reservados. Desenvolvido com ❤️ para a comunidade BJJ.
 
 ---
 
-**FellasCast** - Controle de Eventos BJJ | Desenvolvido com ❤️
+**Goodfellas Podcast** - Controle de Eventos BJJ | Desenvolvido com ❤️

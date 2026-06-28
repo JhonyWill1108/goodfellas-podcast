@@ -1,6 +1,6 @@
 # 📊 Guia de Upload de Planilha
 
-O FellasCast agora permite importar lutadores e CTs em lote através de planilhas Excel ou CSV!
+O Goodfellas Podcast agora permite importar lutadores e CTs em lote através de planilhas Excel ou CSV!
 
 ## Como Usar
 
@@ -103,7 +103,7 @@ CT Gracie     | Pedro Costa | Rua C, 789 - Belo Horizonte, MG
 
 ### Cenário 3: Migrar de outro sistema
 1. Exporte os dados do sistema anterior em CSV ou Excel
-2. Remapeie as colunas para coincidir com o template do FellasCast
+2. Remapeie as colunas para coincidir com o template do Goodfellas Podcast
 3. Importe tudo de uma vez
 
 ---

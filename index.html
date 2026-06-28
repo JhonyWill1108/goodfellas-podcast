@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>FellasCast — Controle de Eventos BJJ</title>
+<title>Goodfellas Podcast — Controle de Eventos BJJ</title>
 <link rel="icon" href="goodfellas-logo.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -1426,7 +1426,7 @@
 <body>
 
 <div class="mobile-header">
-  <div class="logo-title">FELLAS<span style="color:var(--accent)">CAST</span></div>
+  <div class="logo-title">GOODFELLAS<span style="color:var(--accent)"> PODCAST</span></div>
   <div id="mobile-firebase-status" style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)"></div>
 </div>
 
@@ -1444,15 +1444,15 @@ import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, o
 // ══════════════════════════════════════════════════════
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCDQDU4TZGFAneHSDRWL117_aFpwuhIdQE",
-  authDomain: "fellascast.firebaseapp.com",
-  projectId: "fellascast",
-  storageBucket: "fellascast.firebasestorage.app",
+  authDomain: "goodfellas-podcast.firebaseapp.com",
+  projectId: "goodfellas-podcast",
+  storageBucket: "goodfellas-podcast.firebasestorage.app",
   messagingSenderId: "214101637144",
   appId: "1:214101637144:web:e0fd3b46b158e8fa8f6b6d"
 };
 
 let FIREBASE_CONFIG = DEFAULT_FIREBASE_CONFIG;
-const storedConfig = localStorage.getItem('fellascast_firebase_config');
+const storedConfig = localStorage.getItem('goodfellas_podcast_firebase_config');
 if (storedConfig) {
   try {
     FIREBASE_CONFIG = JSON.parse(storedConfig);
@@ -2412,12 +2412,12 @@ function renderRanking() {
 
   // Calculate wins and totals for all fighters
   const data = lutadores.map(l => {
-    const winsFellas = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l.nome).length;
+    const winsGoodfellas = eventos.filter(e => e.tipo === 'LUTA' && e.vencedor === l.nome).length;
     const vitoriasBase = l.vitoriasBase || 0;
-    const totalWins = vitoriasBase + winsFellas;
+    const totalWins = vitoriasBase + winsGoodfellas;
     return {
       ...l,
-      winsFellas,
+      winsGoodfellas,
       vitoriasBase,
       totalWins
     };
@@ -2471,7 +2471,7 @@ function renderRanking() {
       </td>
       <td style="font-size:12px;color:var(--muted)">${l.equipe || '-'}</td>
       <td>${l.faixa ? `<span class="faixa-badge">${l.faixa}${l.grau ? ' ' + l.grau : ''}</span>` : '-'}</td>
-      <td style="font-family:var(--font-mono);font-size:11px">${l.winsFellas}</td>
+      <td style="font-family:var(--font-mono);font-size:11px">${l.winsGoodfellas}</td>
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--muted)">${l.vitoriasBase}</td>
       <td style="font-family:var(--font-mono);font-weight:600;color:var(--gold)">${l.totalWins}</td>
     `;
@@ -2700,7 +2700,7 @@ window.updateGoogleConnectionStatus = function() {
 };
 
 async function getOrCreateFolder() {
-  const folderName = 'FellasCast_Media';
+  const folderName = 'GoodfellasPodcast_Media';
   const queryUrl = `https://www.googleapis.com/drive/v3/files?q=name='${encodeURIComponent(folderName)}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
   
   let response = await fetch(queryUrl, {
@@ -3853,7 +3853,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <div class="sidebar">
   <div class="logo">
-    <div class="logo-title">FELLAS<span style="color:var(--accent)">CAST</span></div>
+    <div class="logo-title">GOODFELLAS<span style="color:var(--accent)"> PODCAST</span></div>
     <div class="logo-sub">BJJ Events Control</div>
   </div>
   <nav class="nav">
@@ -4058,7 +4058,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <th>Lutador</th>
             <th>Equipe</th>
             <th>Faixa / Grau</th>
-            <th>Vitórias FellasCast</th>
+            <th>Vitórias Goodfellas Podcast</th>
             <th>Vitórias Iniciais</th>
             <th>Vitórias Totais</th>
           </tr>

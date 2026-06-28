@@ -377,7 +377,7 @@ Firebase: Deve estar conectado
 
 ---
 
-**FellasCast v2.0.0** ✅
+**Goodfellas Podcast v2.0.0** ✅
 Controle de Eventos BJJ com Upload de Planilha
 
 Desenvolvido com ❤️ para otimizar seu workflow!

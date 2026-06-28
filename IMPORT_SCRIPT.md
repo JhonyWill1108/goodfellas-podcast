@@ -1,4 +1,4 @@
-# 🚀 Script de Importação - FellasCast
+# 🚀 Script de Importação - Goodfellas Podcast
 
 ## 📋 Como Usar
 
@@ -32,8 +32,8 @@ node import-data.js
 ### Resultado
 ```
 ╔═════════════════════════════════════════╗
-║  FellasCast - Importador de Dados      ║
-║  Upload de Lutadores e CTs             ║
+║  Goodfellas Podcast - Importador de     ║
+║  Dados - Upload de Lutadores e CTs      ║
 ╚═════════════════════════════════════════╝
 
 📥 Importando Lutadores...

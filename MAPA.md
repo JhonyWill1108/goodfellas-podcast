@@ -44,7 +44,7 @@
    │
    ├─→ 📖 Informações Gerais?
    │   └─→ 📖 README.md
-   │       └─→ \"Visão geral do FellasCast\"
+   │       └─→ \"Visão geral do Goodfellas Podcast\"
    │       └─→ \"Funcionalidades principais\"
    │       └─→ \"Stack técnico completo\"
    │
@@ -251,7 +251,7 @@ Nível 3: AVANÇADO (1.5 horas)
 ## 📚 Estrutura de Documentação
 
 ```
-📁 Documentação FellasCast
+📁 Documentação Goodfellas Podcast
 │
 ├─ 🎯 PRIMEIRO CONTATO
 │  ├─ COMECE_AQUI.md ⭐ (LEIA ISSO PRIMEIRO!)
@@ -412,4 +412,4 @@ Comece com: **[COMECE_AQUI.md](./COMECE_AQUI.md)** 👈
 
 ---
 
-**Mapa de Documentação - FellasCast v2.0.0** ✅
+**Mapa de Documentação - Goodfellas Podcast v2.0.0** ✅

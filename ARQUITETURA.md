@@ -294,7 +294,7 @@ Firebase Batch:
 ## 🌳 Estrutura de Arquivos
 
 ```
-/fellas-cast
+/goodfellas-podcast
 ├── index.html               ← APP + NOVO UPLOAD
 ├── README.md               ← DOCUMENTAÇÃO PRINCIPAL
 ├── UPLOAD_PLANILHA.md      ← GUIA DE USO

@@ -171,8 +171,8 @@ downloadTemplateCTs()           // Baixa template de CTs
 
 ## 🙏 Agradecimentos
 
-Implementado com foco em facilitar o gerenciamento em lote de dados no FellasCast.
+Implementado com foco em facilitar o gerenciamento em lote de dados no Goodfellas Podcast.
 
 ---
 
-**FellasCast v2.0.0** - Upload de Planilha ✅
+**Goodfellas Podcast v2.0.0** - Upload de Planilha ✅

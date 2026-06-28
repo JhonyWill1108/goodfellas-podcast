@@ -119,6 +119,6 @@ CT Alliance,Maria Santos,"Av. Paulista, 456 - São Paulo, SP"
 2. Cole em seu software de planilha (Excel, Google Sheets, LibreOffice)
 3. Personalize com seus dados
 4. Salve em Excel ou CSV
-5. Use o botão de importação no FellasCast
+5. Use o botão de importação no Goodfellas Podcast
 
 **Pronto! Seus dados serão importados em segundos!** ⚡

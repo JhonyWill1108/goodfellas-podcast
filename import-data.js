@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Script de Importação de Dados para FellasCast
+ * Script de Importação de Dados para Goodfellas Podcast
  * 
  * Uso:
  * 1. npm install firebase firebase-admin
@@ -218,8 +218,8 @@ async function validarDados() {
 
 async function main() {
   console.log('╔═════════════════════════════════════════╗');
-  console.log('║  FellasCast - Importador de Dados      ║');
-  console.log('║  Upload de Lutadores e CTs             ║');
+  console.log('║  Goodfellas Podcast - Importador de     ║');
+  console.log('║  Dados - Upload de Lutadores e CTs      ║');
   console.log('╚═════════════════════════════════════════╝');
   
   try {
