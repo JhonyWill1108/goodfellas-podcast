@@ -1491,7 +1491,9 @@ let uploadTipo = null;
 
 // ── Estado da UI ──────────────────────────────────────
 let currentSection  = 'painel';
-let eventoPage      = 1; const PER_PAGE = 15;
+let eventoPage      = 1;
+const PER_PAGE = 15;
+const EVENTOS_PER_PAGE = 25;
 let lutadorPage     = 1;
 let ctPage          = 1;
 let eventoSearch    = '';
@@ -2228,9 +2230,9 @@ function renderEventos() {
   });
 
   const total = filtered.length;
-  const pages = Math.ceil(total / PER_PAGE) || 1;
+  const pages = Math.ceil(total / EVENTOS_PER_PAGE) || 1;
   eventoPage  = Math.min(eventoPage, pages);
-  const slice = filtered.slice((eventoPage-1)*PER_PAGE, eventoPage*PER_PAGE);
+  const slice = filtered.slice((eventoPage-1)*EVENTOS_PER_PAGE, eventoPage*EVENTOS_PER_PAGE);
 
   if (!slice.length) {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon">🥋</div><div class="empty-text">Nenhum evento encontrado</div></div></td></tr>`;
