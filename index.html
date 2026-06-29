@@ -1430,8 +1430,8 @@
   <div id="mobile-firebase-status" style="width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success)"></div>
 </div>
 
-<!-- SHEETJS LIBRARY FOR EXCEL/CSV -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- SHEETJS LIBRARY FOR EXCEL/CSV (Styled Fork) -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
 <!-- FIREBASE SDK -->
 <script type="module">
@@ -3403,9 +3403,8 @@ window.openUploadCTs = function() {
 async function ensureXLSXLoaded() {
   if (window.XLSX) return true;
   const urls = [
-    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
-    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+    'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
+    'https://unpkg.com/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'
   ];
   for (const url of urls) {
     try {
@@ -3686,25 +3685,165 @@ window.exportarExcel = async function(tipo) {
     toast('Erro: Biblioteca de planilhas não pôde ser carregada.', 'error');
     return;
   }
-  let dataToExport = [];
+  
+  let workbook = XLSX.utils.book_new();
+  let worksheet;
   let filename = '';
   
   if (tipo === 'eventos') {
-    dataToExport = eventos.map(e => ({
-      'Número': e.numero || '',
-      'Data': e.data || '',
-      'Horário': e.horario || '',
-      'Tipo': e.tipo || '',
-      'Convidado 1': e.nomeC1 || '',
-      'Obs Convidado 1': e.obsC1 || '',
-      'Convidado 2': e.nomeC2 || '',
-      'Obs Convidado 2': e.obsC2 || '',
-      'CT': e.ct || '',
-      'Link da Live': e.link || ''
-    }));
     filename = 'eventos.xlsx';
+    
+    // Constrói Array of Arrays para o cabeçalho duplo
+    const aoa = [];
+    
+    // Linha 1: Títulos dos grupos
+    aoa.push([
+      "INFORMAÇÕES DO EVENTO", "", "", "",
+      "CONVIDADO 1", "", "", "", "",
+      "CONVIDADO 2", "", "", "", "",
+      "LOCAL & LINK", "", ""
+    ]);
+    
+    // Linha 2: Subtítulos/Campos reais
+    aoa.push([
+      "Nº", "DATA", "HORÁRIO", "EVENTO",
+      "NOME C1", "INSTAGRAM C1", "GRADUAÇÃO C1", "ESPECIFICAÇÕES C1", "OBSERVAÇÕES C1",
+      "NOME C2", "INSTAGRAM C2", "GRADUAÇÃO C2", "ESPECIFICAÇÕES C2", "OBSERVAÇÕES C2",
+      "CT (LOCAL)", "ENDEREÇO", "LINK DA LIVE"
+    ]);
+    
+    // Adiciona as linhas de dados dos eventos
+    const eventosOrdenados = [...eventos].sort((a, b) => {
+      const numA = parseInt(a.numero) || 0;
+      const numB = parseInt(b.numero) || 0;
+      return numA - numB;
+    });
+
+    eventosOrdenados.forEach(e => {
+      aoa.push([
+        e.numero || '',
+        e.data || '',
+        e.horario || '',
+        e.tipo || '',
+        e.nomeC1 || '',
+        e.instaC1 || '',
+        e.gradC1 || '',
+        e.especC1 || '',
+        e.obsC1 || '',
+        e.nomeC2 || '',
+        e.instaC2 || '',
+        e.gradC2 || '',
+        e.especC2 || '',
+        e.obsC2 || '',
+        e.ct || '',
+        e.endereco || '',
+        e.link || ''
+      ]);
+    });
+    
+    worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    
+    // Define merges
+    worksheet['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },   // A1:D1 -> INFORMAÇÕES DO EVENTO
+      { s: { r: 0, c: 4 }, e: { r: 0, c: 8 } },   // E1:I1 -> CONVIDADO 1
+      { s: { r: 0, c: 9 }, e: { r: 0, c: 13 } },  // J1:N1 -> CONVIDADO 2
+      { s: { r: 0, c: 14 }, e: { r: 0, c: 16 } }  // O1:Q1 -> LOCAL & LINK
+    ];
+
+    // Define column widths
+    worksheet['!cols'] = [
+      { wch: 6 },   // Nº
+      { wch: 11 },  // DATA
+      { wch: 9 },   // HORÁRIO
+      { wch: 11 },  // EVENTO
+      { wch: 22 },  // NOME C1
+      { wch: 18 },  // INSTAGRAM C1
+      { wch: 25 },  // GRADUAÇÃO C1
+      { wch: 22 },  // ESPECIFICAÇÕES C1
+      { wch: 22 },  // OBSERVAÇÕES C1
+      { wch: 22 },  // NOME C2
+      { wch: 18 },  // INSTAGRAM C2
+      { wch: 25 },  // GRADUAÇÃO C2
+      { wch: 22 },  // ESPECIFICAÇÕES C2
+      { wch: 22 },  // OBSERVAÇÕES C2
+      { wch: 22 },  // CT (LOCAL)
+      { wch: 32 },  // ENDEREÇO
+      { wch: 32 }   // LINK DA LIVE
+    ];
+
+    const maxRow = aoa.length;
+    const maxCol = 17;
+
+    const thinBorder = {
+      top: { style: "thin", color: { rgb: "D1D5DB" } },
+      bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+      left: { style: "thin", color: { rgb: "D1D5DB" } },
+      right: { style: "thin", color: { rgb: "D1D5DB" } }
+    };
+
+    // Aplica estilos célula a célula
+    for (let r = 0; r < maxRow; r++) {
+      for (let c = 0; c < maxCol; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (!worksheet[cellRef]) {
+          worksheet[cellRef] = { t: 's', v: '' };
+        }
+        const cell = worksheet[cellRef];
+        
+        // Estilo padrão base
+        cell.s = {
+          border: thinBorder,
+          font: { name: "Segoe UI", sz: 10, color: { rgb: "333333" } },
+          alignment: { vertical: "center", wrapText: true }
+        };
+
+        if (r === 0 || r === 1) {
+          // Cabeçalhos (Linha 1 e 2)
+          cell.s.font.bold = true;
+          cell.s.font.color = { rgb: "FFFFFF" };
+          cell.s.alignment.horizontal = "center";
+          
+          if (r === 0) {
+            cell.s.font.sz = 11;
+          }
+
+          // Definir cor de fundo com base no grupo de colunas
+          if (c >= 0 && c <= 3) {
+            // INFORMAÇÕES DO EVENTO (Dark Slate/Navy)
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "1E293B" } };
+          } else if (c >= 4 && c <= 8) {
+            // CONVIDADO 1 (Roxo - cor da variável --c1)
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "7B2D8B" } };
+          } else if (c >= 9 && c <= 13) {
+            // CONVIDADO 2 (Vermelho - cor da variável --c2)
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "E63946" } };
+          } else if (c >= 14 && c <= 16) {
+            // LOCAL & LINK (Azul - cor da variável --ct-col)
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "1A6B8B" } };
+          }
+        } else {
+          // Linhas de dados
+          // Zebra striping
+          if ((r - 2) % 2 === 0) {
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "F1F5F9" } };
+          } else {
+            cell.s.fill = { patternType: "solid", fgColor: { rgb: "FFFFFF" } };
+          }
+
+          // Alinhamento horizontal diferenciado
+          if (c >= 0 && c <= 3) {
+            cell.s.alignment.horizontal = "center";
+          } else {
+            cell.s.alignment.horizontal = "left";
+          }
+        }
+      }
+    }
+
   } else if (tipo === 'lutadores') {
-    dataToExport = lutadores.map(l => ({
+    filename = 'lutadores.xlsx';
+    const dataToExport = lutadores.map(l => ({
       'Nome': l.nome || '',
       'Instagram': l.instagram || '',
       'Faixa': l.faixa || '',
@@ -3714,9 +3853,27 @@ window.exportarExcel = async function(tipo) {
       'Peso': l.peso || '',
       'Altura': l.altura || ''
     }));
-    filename = 'lutadores.xlsx';
+    
+    worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Configura larguras de coluna
+    worksheet['!cols'] = [
+      { wch: 22 }, // Nome
+      { wch: 18 }, // Instagram
+      { wch: 15 }, // Faixa
+      { wch: 10 }, // Grau
+      { wch: 22 }, // Equipe
+      { wch: 8 },  // Idade
+      { wch: 8 },  // Peso
+      { wch: 8 }   // Altura
+    ];
+    
+    // Aplica formatação consistente
+    formatSimpleSheet(worksheet, dataToExport.length + 1, 8, "7B2D8B"); // Cabeçalho Roxo
+
   } else if (tipo === 'cts') {
-    dataToExport = cts.map(c => ({
+    filename = 'cts.xlsx';
+    const dataToExport = cts.map(c => ({
       'Nome do CT': c.nome || '',
       'Responsável': c.dono || '',
       'Endereço': c.endereco || '',
@@ -3728,17 +3885,75 @@ window.exportarExcel = async function(tipo) {
       'Reserva 3 Nome': c.reserva3Nome || '',
       'Reserva 3 Contato': c.reserva3Tel || ''
     }));
-    filename = 'cts.xlsx';
+    
+    worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Configura larguras de coluna
+    worksheet['!cols'] = [
+      { wch: 22 }, // Nome do CT
+      { wch: 20 }, // Responsável
+      { wch: 32 }, // Endereço
+      { wch: 15 }, // Contato
+      { wch: 18 }, // Reserva 1 Nome
+      { wch: 15 }, // Reserva 1 Contato
+      { wch: 18 }, // Reserva 2 Nome
+      { wch: 15 }, // Reserva 2 Contato
+      { wch: 18 }, // Reserva 3 Nome
+      { wch: 15 }  // Reserva 3 Contato
+    ];
+    
+    // Aplica formatação consistente
+    formatSimpleSheet(worksheet, dataToExport.length + 1, 10, "1A6B8B"); // Cabeçalho Azul
   }
   
   try {
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
     XLSX.writeFile(workbook, filename);
     toast('Planilha exportada com sucesso!');
   } catch (err) {
     toast(`Erro ao exportar: ${err.message}`, 'error');
+  }
+};
+
+// Função auxiliar para formatar planilhas simples (Lutadores/CTs)
+function formatSimpleSheet(worksheet, numRows, numCols, headerColor) {
+  const thinBorder = {
+    top: { style: "thin", color: { rgb: "D1D5DB" } },
+    bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+    left: { style: "thin", color: { rgb: "D1D5DB" } },
+    right: { style: "thin", color: { rgb: "D1D5DB" } }
+  };
+
+  for (let r = 0; r < numRows; r++) {
+    for (let c = 0; c < numCols; c++) {
+      const cellRef = XLSX.utils.encode_cell({ r, c });
+      if (!worksheet[cellRef]) {
+        worksheet[cellRef] = { t: 's', v: '' };
+      }
+      const cell = worksheet[cellRef];
+      
+      cell.s = {
+        border: thinBorder,
+        font: { name: "Segoe UI", sz: 10, color: { rgb: "333333" } },
+        alignment: { vertical: "center", wrapText: true }
+      };
+
+      if (r === 0) {
+        // Cabeçalho
+        cell.s.font.bold = true;
+        cell.s.font.color = { rgb: "FFFFFF" };
+        cell.s.fill = { patternType: "solid", fgColor: { rgb: headerColor } };
+        cell.s.alignment.horizontal = "center";
+      } else {
+        // Dados (Zebra striping)
+        if (r % 2 === 1) {
+          cell.s.fill = { patternType: "solid", fgColor: { rgb: "F1F5F9" } };
+        } else {
+          cell.s.fill = { patternType: "solid", fgColor: { rgb: "FFFFFF" } };
+        }
+        cell.s.alignment.horizontal = "left";
+      }
+    }
   }
 }
 
