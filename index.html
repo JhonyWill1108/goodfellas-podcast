@@ -3703,9 +3703,11 @@ window.exportarExcel = async function(tipo) {
   let workbook = XLSX.utils.book_new();
   let worksheet;
   let filename = '';
+  let sheetName = tipo.charAt(0).toUpperCase() + tipo.slice(1);
   
   if (tipo === 'eventos') {
-    filename = 'eventos.xlsx';
+    filename = 'CONTROLE PODCAST - Eventos e Lives.xlsx';
+    sheetName = 'Eventos e Lives';
     
     // Constrói Array of Arrays para o cabeçalho duplo
     const aoa = [];
@@ -3887,6 +3889,7 @@ window.exportarExcel = async function(tipo) {
 
   } else if (tipo === 'cts') {
     filename = 'cts.xlsx';
+    sheetName = 'CTs';
     const dataToExport = cts.map(c => ({
       'Nome do CT': c.nome || '',
       'Responsável': c.dono || '',
@@ -3921,7 +3924,7 @@ window.exportarExcel = async function(tipo) {
   }
   
   try {
-    XLSX.utils.book_append_sheet(workbook, worksheet, tipo.charAt(0).toUpperCase() + tipo.slice(1));
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
     XLSX.writeFile(workbook, filename);
     toast('Planilha exportada com sucesso!');
   } catch (err) {
