@@ -3728,12 +3728,16 @@ window.exportarExcel = async function(tipo) {
       "CT (LOCAL)", "ENDEREÇO", "LINK DA LIVE"
     ]);
     
-    // Adiciona as linhas de dados dos eventos
-    const eventosOrdenados = [...eventos].sort((a, b) => {
-      const numA = parseInt(a.numero) || 0;
-      const numB = parseInt(b.numero) || 0;
-      return numA - numB;
+    // Filtra os eventos com a busca atual da tela
+    const q = eventoSearch.toLowerCase();
+    const eventosFiltrados = eventos.filter(e => {
+      return !q || (e.data||'').includes(q) || (e.tipo||'').toLowerCase().includes(q)
+        || (e.nomeC1||'').toLowerCase().includes(q) || (e.nomeC2||'').toLowerCase().includes(q)
+        || (e.ct||'').toLowerCase().includes(q);
     });
+
+    // Mantém a ordem exibida na tela (decrescente por número)
+    const eventosOrdenados = [...eventosFiltrados];
 
     eventosOrdenados.forEach(e => {
       const l1 = getLutador(e.nomeC1 || '');
@@ -3873,7 +3877,14 @@ window.exportarExcel = async function(tipo) {
 
   } else if (tipo === 'lutadores') {
     filename = 'lutadores.xlsx';
-    const dataToExport = lutadores.map(l => ({
+    
+    // Filtra os lutadores com a busca atual da tela
+    const q = lutadorSearch.toLowerCase();
+    const lutadoresFiltrados = lutadores.filter(l => {
+      return !q || (l.nome||'').toLowerCase().includes(q) || (l.equipe||'').toLowerCase().includes(q) || (l.faixa||'').toLowerCase().includes(q);
+    });
+    
+    const dataToExport = lutadoresFiltrados.map(l => ({
       'Nome': l.nome || '',
       'Instagram': l.instagram || '',
       'Faixa': l.faixa || '',
@@ -3904,7 +3915,14 @@ window.exportarExcel = async function(tipo) {
   } else if (tipo === 'cts') {
     filename = 'cts.xlsx';
     sheetName = 'CTs';
-    const dataToExport = cts.map(c => ({
+    
+    // Filtra os CTs com a busca atual da tela
+    const q = ctSearch.toLowerCase();
+    const ctsFiltrados = cts.filter(c => {
+      return !q || (c.nome||'').toLowerCase().includes(q) || (c.dono||'').toLowerCase().includes(q);
+    });
+    
+    const dataToExport = ctsFiltrados.map(c => ({
       'Nome do CT': c.nome || '',
       'Responsável': c.dono || '',
       'Endereço': c.endereco || '',
