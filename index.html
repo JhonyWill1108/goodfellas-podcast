@@ -3736,23 +3736,37 @@ window.exportarExcel = async function(tipo) {
     });
 
     eventosOrdenados.forEach(e => {
+      const l1 = getLutador(e.nomeC1 || '');
+      const l2 = getLutador(e.nomeC2 || '');
+      const ctObj = getCT(e.ct || '');
+
+      const instaC1 = e.instaC1 !== undefined ? e.instaC1 : (l1.instagram || '');
+      const gradC1 = e.gradC1 !== undefined ? e.gradC1 : (l1.faixa ? graduacao(l1) : '');
+      const especC1 = e.especC1 !== undefined ? e.especC1 : (l1.faixa ? especificacoes(l1) : '');
+
+      const instaC2 = e.instaC2 !== undefined ? e.instaC2 : (l2.instagram || '');
+      const gradC2 = e.gradC2 !== undefined ? e.gradC2 : (l2.faixa ? graduacao(l2) : '');
+      const especC2 = e.especC2 !== undefined ? e.especC2 : (l2.faixa ? especificacoes(l2) : '');
+
+      const endereco = e.endereco !== undefined ? e.endereco : (ctObj.endereco || '');
+
       aoa.push([
         e.numero || '',
         formatDateToYY(e.data, ''),
         e.horario || '',
         e.tipo || '',
         e.nomeC1 || '',
-        e.instaC1 || '',
-        e.gradC1 || '',
-        e.especC1 || '',
+        instaC1 || '',
+        gradC1 || '',
+        especC1 || '',
         e.obsC1 || '',
         e.nomeC2 || '',
-        e.instaC2 || '',
-        e.gradC2 || '',
-        e.especC2 || '',
+        instaC2 || '',
+        gradC2 || '',
+        especC2 || '',
         e.obsC2 || '',
         e.ct || '',
-        e.endereco || '',
+        endereco || '',
         e.link || ''
       ]);
     });
